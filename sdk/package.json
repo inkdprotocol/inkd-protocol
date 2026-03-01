@@ -1,0 +1,42 @@
+{
+  "name": "@inkd/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Inkd Protocol — the decentralized ownership layer for AI agents on Base",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "inkd",
+    "ai-agents",
+    "web3",
+    "base",
+    "erc1155",
+    "arweave",
+    "decentralized-storage",
+    "agent-memory"
+  ],
+  "author": "Inkd Protocol",
+  "license": "MIT",
+  "dependencies": {
+    "@irys/sdk": "^0.2.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inkd-protocol/inkd-protocol"
+  }
+}
