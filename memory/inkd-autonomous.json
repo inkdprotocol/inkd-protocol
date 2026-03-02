@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-03T01:14:00+04:00",
+  "lastUpdated": "2026-03-03T03:21:00+04:00",
   "version": "0.9.x",
   "tasks": [
     {
@@ -33,19 +33,43 @@
     {
       "id": "sdk-event-subscriptions",
       "priority": 4,
-      "status": "pending",
+      "status": "done",
       "title": "SDK v0.2 — event subscriptions (watchEvent wrappers)",
-      "description": "Phase 2 roadmap item. Add viem watchEvent wrappers for ProjectCreated, VersionPushed events. Keep on 0.9.x versioning.",
-      "blockedBy": null
+      "description": "Added viem watchContractEvent wrappers for ProjectCreated and VersionPushed. New module: sdk/src/events.ts with watchProjectCreated(), watchVersionPushed(), watchRegistryEvents() batch helper. Full TypeScript types with filter support (owner filter for ProjectCreated, projectId filter for VersionPushed). All helpers re-exported from sdk/src/index.ts.",
+      "completedAt": "2026-03-03T01:44:00+04:00",
+      "commit": "2bb1868",
+      "result": "SDK tests: 194 → 227 (+33 new event tests). All 227 passing. Contracts: 159/159 passing."
     },
     {
       "id": "sdk-batch-reads",
       "priority": 5,
-      "status": "pending",
+      "status": "done",
       "title": "SDK v0.2 — batch reads (Multicall3 integration)",
-      "description": "Phase 2 roadmap item. Add multi-project fetch via Multicall3.",
-      "blockedBy": null
+      "description": "Added Multicall3-powered batch reads: batchGetProjects(), batchGetVersions(), batchGetFees(), batchGetProjectsWithVersions(). New module: sdk/src/multicall.ts. BatchResult<T> wrapper with success/data/error shape. All helpers re-exported from index.ts.",
+      "completedAt": "2026-03-03T02:16:00+04:00",
+      "commit": "f8c7e08",
+      "result": "SDK tests: 227 → 255 (+28 new multicall tests). All 255 passing. Contracts: 159/159 passing."
+    },
+    {
+      "id": "test-lit-encryption-provider",
+      "priority": 6,
+      "status": "done",
+      "title": "Full LitEncryptionProvider test coverage — encryption.ts 52% → 100%",
+      "description": "encryption.ts had only 7 PassthroughEncryption tests. Lines 55–102 (LitEncryptionProvider class: constructor, connect, encrypt, decrypt, encryptForToken, decryptWithToken) were completely uncovered. Added 16 new tests covering all V1 stub behaviors (all methods throw EncryptionError with V2 message). Fixed duplicate const declarations in test file.",
+      "completedAt": "2026-03-03T02:50:00+04:00",
+      "commit": "a391257",
+      "result": "SDK tests: 255 → 271 (+16). All 271 passing. encryption.ts: 52.94% → 100% stmts/branch/funcs/lines. Overall SDK coverage: 93.48% → 94.24%. Contracts: 159/159 passing."
+    },
+    {
+      "id": "branch-coverage-gaps",
+      "priority": 7,
+      "status": "done",
+      "title": "Plug branch coverage gaps — 96.37% → 99.2% branches",
+      "description": "No pending tasks. Audited all uncovered branches: (1) multicall.ts coerceResult non-Error error path (string/number/undefined); (2) ProjectRegistry extractProjectIdFromLogs catch block for invalid BigInt topic; (3) InkdClient extractAllTokenIdsFromLogs + extractInscriptionIndexFromLogs + extractTokenIdFromLogs catch blocks; (4) arweave.ts dead-branch fix: data instanceof Uint8Array always true for Buffer|Uint8Array (Buffer extends Uint8Array), replaced with Buffer.isBuffer() so both branches are reachable and covered.",
+      "completedAt": "2026-03-03T03:21:00+04:00",
+      "commit": "e27e4af",
+      "result": "SDK tests: 271 → 282 (+11). All 282 passing. Branch coverage: 96.37% → 99.2%. multicall.ts + ProjectRegistry.ts + arweave.ts all at 100% branch coverage. Contracts: 159/159 passing."
     }
   ],
-  "notes": "File auto-created 2026-03-03 — no prior file existed. inkd-autonomous.json was missing; initialized with current state based on git log and ROADMAP.md."
+  "notes": "File auto-created 2026-03-03. inkd-autonomous.json was missing; initialized with current state based on git log and ROADMAP.md."
 }
