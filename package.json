@@ -4,11 +4,13 @@
   "private": true,
   "description": "The decentralized ownership layer for AI agents on Base",
   "workspaces": [
-    "sdk"
+    "sdk",
+    "cli"
   ],
   "scripts": {
-    "build": "npm run build:sdk",
+    "build": "npm run build:sdk && npm run build:cli",
     "build:sdk": "cd sdk && npm run build",
+    "build:cli": "cd cli && npm run build",
     "build:contracts": "cd contracts && forge build",
     "test:contracts": "cd contracts && forge test -vvv",
     "test:coverage": "cd contracts && forge coverage",
