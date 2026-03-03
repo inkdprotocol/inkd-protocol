@@ -115,7 +115,7 @@ export interface VersionPushedFilter {
 export function watchProjectCreated(
   publicClient: PublicClient,
   registryAddress: Address,
-  onEvent: (event: ProjectCreatedEvent) => void,
+  onEvent: (_event: ProjectCreatedEvent) => void,
   filter?: ProjectCreatedFilter
 ): Unwatch {
   return publicClient.watchContractEvent({
@@ -150,7 +150,7 @@ export function watchProjectCreated(
 export function watchVersionPushed(
   publicClient: PublicClient,
   registryAddress: Address,
-  onEvent: (event: VersionPushedEvent) => void,
+  onEvent: (_event: VersionPushedEvent) => void,
   filter?: VersionPushedFilter
 ): Unwatch {
   return publicClient.watchContractEvent({
@@ -193,8 +193,8 @@ export function watchRegistryEvents(
   publicClient: PublicClient,
   registryAddress: Address,
   handlers: {
-    onProjectCreated?: (event: ProjectCreatedEvent) => void;
-    onVersionPushed?: (event: VersionPushedEvent) => void;
+    onProjectCreated?: (_event: ProjectCreatedEvent) => void;
+    onVersionPushed?: (_event: VersionPushedEvent) => void;
     projectCreatedFilter?: ProjectCreatedFilter;
     versionPushedFilter?: VersionPushedFilter;
   }

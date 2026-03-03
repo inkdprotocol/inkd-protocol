@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, @typescript-eslint/no-unused-vars */
 /**
  * @file encryption.ts
  * @description Lit Protocol integration for token-gated encryption.

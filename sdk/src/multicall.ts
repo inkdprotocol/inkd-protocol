@@ -137,7 +137,7 @@ export async function batchGetProjects(
   }));
 
   const results = await (publicClient as unknown as {
-    multicall: (opts: {
+    multicall: (_opts: {
       contracts: typeof contracts;
       allowFailure: boolean;
     }) => Promise<{ result?: unknown; status?: "success" | "failure"; error?: unknown }[]>;
@@ -175,7 +175,7 @@ export async function batchGetVersions(
   }));
 
   const results = await (publicClient as unknown as {
-    multicall: (opts: {
+    multicall: (_opts: {
       contracts: typeof contracts;
       allowFailure: boolean;
     }) => Promise<{ result?: unknown; status?: "success" | "failure"; error?: unknown }[]>;
@@ -229,7 +229,7 @@ export async function batchGetFees(
   ] as const;
 
   const results = await (publicClient as unknown as {
-    multicall: (opts: {
+    multicall: (_opts: {
       contracts: typeof contracts;
       allowFailure: boolean;
     }) => Promise<{ result?: unknown; status?: "success" | "failure" }[]>;
