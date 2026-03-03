@@ -64,14 +64,17 @@ export function requirePrivateKey(cfg: InkdConfig): `0x${string}` {
 
 export const ADDRESSES = {
   mainnet: {
-    token:    '' as Address,   // populated post-launch
+    // $INKD — real launch (tonight)
+    token:    '' as Address,
     registry: '' as Address,
     treasury: '' as Address,
   },
   testnet: {
-    token:    '' as Address,   // populated post-testnet deploy
-    registry: '' as Address,
-    treasury: '' as Address,
+    // $TEST — beta launch on Base mainnet (2026-03-03)
+    token:    '0xdea1645d97AE3090fb787bbdB49cf6D5638c1b55' as Address,
+    registry: '0x8daD662a4dEAF42187F5abeBC18886175a75A364' as Address,
+    treasury: '0x1B24F377C5264d07E7443cB714D27fA484BE0F02' as Address,
+    rpcUrl:   'https://mainnet.base.org',
   },
 } as const
 
