@@ -27,7 +27,7 @@ export default [
     rules: {
       // TypeScript-specific
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
       '@typescript-eslint/no-floating-promises': 'error',
@@ -41,9 +41,10 @@ export default [
       'prefer-const': 'error',
       'no-var': 'error',
 
-      // Disabled (handled by TypeScript compiler)
+      // Disabled (handled by TypeScript compiler or @typescript-eslint equivalents)
       'no-undef': 'off',
       'no-redeclare': 'off',
+      'no-unused-vars': 'off',
     },
   },
 
@@ -52,6 +53,7 @@ export default [
     files: ['src/__tests__/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
       'no-console': 'off',
     },
   },

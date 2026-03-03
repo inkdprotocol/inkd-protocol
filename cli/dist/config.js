@@ -54,14 +54,18 @@ function requirePrivateKey(cfg) {
 // ─── Inkd contract addresses ─────────────────────────────────────────────────
 exports.ADDRESSES = {
     mainnet: {
-        token: '', // populated post-launch
+        // $INKD — real launch (tonight)
+        token: '',
         registry: '',
         treasury: '',
+        rpcUrl: 'https://mainnet.base.org',
     },
     testnet: {
-        token: '', // populated post-testnet deploy
-        registry: '',
-        treasury: '',
+        // $TEST — beta launch on Base mainnet (2026-03-03)
+        token: '0xdea1645d97AE3090fb787bbdB49cf6D5638c1b55',
+        registry: '0x8daD662a4dEAF42187F5abeBC18886175a75A364',
+        treasury: '0x1B24F377C5264d07E7443cB714D27fA484BE0F02',
+        rpcUrl: 'https://mainnet.base.org',
     },
 };
 // ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars, @typescript-eslint/no-unused-vars */
 /**
  * @file useInkd.ts
  * @description React hook for the Inkd Protocol client.
