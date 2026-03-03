@@ -75,8 +75,8 @@ export class ArweaveClient {
 
     const irysClient = this.irys as {
       upload: (
-        data: Buffer | Uint8Array,
-        opts: { tags: Array<{ name: string; value: string }> }
+        _data: Buffer | Uint8Array,
+        _opts: { tags: Array<{ name: string; value: string }> }
       ) => Promise<{ id: string }>;
     };
 
@@ -136,7 +136,7 @@ export class ArweaveClient {
     }
 
     const irysClient = this.irys as {
-      getPrice: (bytes: number) => Promise<bigint>;
+      getPrice: (_bytes: number) => Promise<bigint>;
     };
 
     try {
