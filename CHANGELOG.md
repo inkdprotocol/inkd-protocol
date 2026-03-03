@@ -6,6 +6,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v0.10.2] — 2026-03-04
+
+### Changed
+- **ROADMAP.md** — comprehensive sync to current state:
+  - Phase 0 table updated with accurate test counts (323 SDK / 238 contracts / 348 CLI)
+  - Added InkdTimelock.sol, InkdTestToken.sol, AUDIT_PREP.md, SUBGRAPH.md, SECURITY_REVIEW.md to Phase 0
+  - Phase 2 SDK v0.2 items (event subscriptions, batch reads, LitEncryptionProvider) marked ✅
+  - Phase 2 status updated from 📅 to 🔄
+  - Footer updated: 312 → 909 tests
+
+### Fixed
+- **ROADMAP.md** stale footer "312 tests passing" → "909 tests passing (238 contracts / 323 SDK / 348 CLI)"
+- **ROADMAP.md** Phase 0 stale counts: "153-test SDK suite" → 323, "159-test contract suite" → 238, "40+ CLI tests" → 348
+
+---
+
+## [v0.10.1] — 2026-03-03
+
+### Added
+- **InkdTimelock.sol** — 48-hour admin timelock for governance transitions; 41-test Foundry suite (constants, constructor, receive, setPendingAdmin, acceptAdmin, queueTransaction, cancelTransaction, executeTransaction, 3 integration flows). All edge cases: replay guard, grace period boundary, stale tx, execution failure, ETH forwarding, admin handover.
+- **InkdTestToken.t.sol** — 27-test coverage for ERC-20, ERC-20Burnable, ERC-2612 Permit (domain separator, nonces, gasless approval, expired deadline, wrong signer reverts), 2 fuzz tests. InkdTestToken.sol: 100% all metrics.
+- **SUBGRAPH.md** — 531-line The Graph integration guide: full GraphQL schema, AssemblyScript mapping stubs for all 10 InkdRegistry events, example queries, SDK hybrid pattern, subgraph.yaml, local dev workflow.
+- **AUDIT_PREP.md** — 342-line external auditor guide: scope, trust model, 10 focus areas, 7 known design decisions, forge commands.
+- **SDK v0.2** — event subscriptions (`watchProjectCreated`, `watchVersionPushed`, `watchRegistryEvents`) and batch reads via Multicall3 (`batchGetProjects`, `batchGetVersions`, `batchGetFees`, `batchGetProjectsWithVersions`). Full 100% branch coverage.
+- **DOCS rewrite** — API.md and QUICKSTART.md rewritten to match current protocol (removed stale NFT/inscription/AgentMemory references; CLI-first onboarding flow).
+- **SDK_REFERENCE.md** updated — full module docs for events.ts, multicall.ts, encryption.ts.
+- **CONTRACT_REFERENCE.md** — InkdTimelock fully documented.
+- **Deploy.s.sol** / **Verify.s.sol** / **POST_DEPLOY.md** — updated for 6-contract deployment including InkdTimelock.
+- **SECURITY_REVIEW.md** — InkdTimelock analysis (LOW-3, INFO-6), access control table extended, verdict: ready for external audit.
+
+### Improved
+- SDK: 100%/100%/100%/100% stmts/branches/funcs/lines across all 11 files.
+- CLI: 99%+ stmts, 97%+ branches across all command modules.
+- CI: Split into `test-sdk` + `test-cli` jobs. `.gitignore` now blocks workspace files from being committed.
+- **Total tests: 909** (238 contracts / 323 SDK / 348 CLI), all green.
+
+---
+
 ## [v0.10.0] — 2026-03-02
 
 ### Added
