@@ -6,7 +6,7 @@
  * viem's publicClient.multicall is mocked via vi.fn().
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   batchGetProjects,
   batchGetVersions,

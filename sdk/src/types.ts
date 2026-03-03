@@ -10,7 +10,6 @@ export type Address = `0x${string}`;
 // ─── Content Types ────────────────────────────────────────────────────────────
 
 /** Common content type values for inscriptions. */
-// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 export enum ContentType {
   JSON = "application/json",
   PlainText = "text/plain",

@@ -11,8 +11,15 @@ contracts/broadcast/
 node_modules/
 sdk/dist/
 sdk/node_modules/
+cli/dist/
+cli/node_modules/
 system/node_modules/
 memory-system/node_modules/
+
+# Coverage reports
+sdk/coverage/
+cli/coverage/
+contracts/lcov.info
 
 # TypeScript
 *.js.map
