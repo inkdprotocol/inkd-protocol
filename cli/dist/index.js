@@ -21,6 +21,7 @@
  *   help                        Show this help message
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.main = main;
 const config_js_1 = require("./config.js");
 const init_js_1 = require("./commands/init.js");
 const status_js_1 = require("./commands/status.js");
@@ -249,10 +250,18 @@ async function main() {
             process.exit(1);
     }
 }
-main().catch((err) => {
-    console.error(`\n  ${'\x1b[31m'}✗${'\x1b[0m'} ${err.message}\n`);
-    if (process.env['INKD_DEBUG'])
-        console.error(err.stack);
-    process.exit(1);
-});
+// Auto-run only when executed directly (not imported in tests)
+const isMain = typeof process !== 'undefined' &&
+    process.argv[1] != null &&
+    (process.argv[1].endsWith('/inkd') ||
+        process.argv[1].endsWith('/index.js') ||
+        process.argv[1].endsWith('/index.ts'));
+if (isMain && process.env['INKD_TEST'] !== '1') {
+    main().catch((err) => {
+        console.error(`\n  ${'\x1b[31m'}✗${'\x1b[0m'} ${err.message}\n`);
+        if (process.env['INKD_DEBUG'])
+            console.error(err.stack);
+        process.exit(1);
+    });
+}
 //# sourceMappingURL=index.js.map

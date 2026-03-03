@@ -447,7 +447,7 @@ describe("BatchResult type contract", () => {
     // Covers the `raw.error instanceof Error → false` branch in coerceResult
     // i.e. `String(raw.error ?? "unknown")` with a defined string value
     const client = makePublicClient(async () => [
-      // @ts-expect-error — testing non-Error error path in coerceResult
+      // testing non-Error error path in coerceResult (string instead of Error object)
       { result: undefined, status: "failure" as const, error: "plain string error" },
     ]);
     const results = await batchGetProjects(client, REGISTRY, [1n]);
@@ -460,7 +460,7 @@ describe("BatchResult type contract", () => {
     // Covers the `raw.status === undefined && raw.result === undefined` branch
     // and the `raw.error ?? "unknown"` fallback (error is also undefined here)
     const client = makePublicClient(async () => [
-      // @ts-expect-error — testing implicit-failure path (no status, no result)
+      // testing implicit-failure path (no status, no result)
       { result: undefined },
     ]);
     const results = await batchGetProjects(client, REGISTRY, [1n]);
