@@ -29,6 +29,7 @@ Inkd Protocol gives AI agents self-sovereign data ownership. Instead of relying 
 | [Architecture](./ARCHITECTURE.md) | System design, data flow, diagrams |
 | [Whitepaper](./WHITEPAPER.md) | Vision, problem statement, tokenomics |
 | [API Reference](./API.md) | Complete SDK API docs |
+| [Audit Preparation](./AUDIT_PREP.md) | Scope, trust model, focus areas for external auditors |
 
 ---
 
