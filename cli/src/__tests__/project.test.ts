@@ -722,3 +722,13 @@ describe("cmdProjectGet — description and visibility branches", () => {
     expect(logged).toMatch(/private/i);
   });
 });
+
+// ─── Branch-coverage gap-fill ─────────────────────────────────────────────────
+
+describe("cmdProjectGet — missing id branch (branch coverage)", () => {
+  it("exits when no positional arg and no --id flag provided", async () => {
+    // args[0] is undefined → ?? triggers requireFlag → missing flag → error() → throws
+    const { cmdProjectGet } = await import("../commands/project.js");
+    await expect(cmdProjectGet([])).rejects.toThrow();
+  });
+});
