@@ -202,6 +202,21 @@ describe("ArweaveClient — uploadFile()", () => {
     expect(opts.tags).toHaveLength(2);
   });
 
+  it("passes non-Uint8Array data directly to upload without Buffer conversion", async () => {
+    // Both `Buffer` and `Uint8Array` are instanceof Uint8Array, so the `else`
+    // branch of `data instanceof Uint8Array ? Buffer.from(data) : data` is only
+    // reachable via a plain object. This test exercises that path.
+    mockUpload.mockResolvedValue({ id: TX_ID });
+    // Plain object with `length` — not instanceof Uint8Array
+    const plainData = { length: 7 } as unknown as Buffer;
+    const result = await client.uploadFile(plainData, "application/octet-stream");
+    expect(result.hash).toBe(TX_ID);
+    expect(result.size).toBe(7);
+    // The same reference should be passed to upload (no Buffer.from conversion)
+    const passedData = mockUpload.mock.calls.at(-1)![0];
+    expect(passedData).toBe(plainData);
+  });
+
   it("throws UploadError when irys.upload rejects", async () => {
     mockUpload.mockRejectedValue(new Error("insufficient balance"));
     await expect(client.uploadFile(Buffer.from("x"), "text/plain")).rejects.toThrow(

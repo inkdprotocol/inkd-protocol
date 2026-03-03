@@ -177,6 +177,26 @@ describe("InkdClient — mintToken()", () => {
     const result = await client.mintToken();
     expect(result.tokenId).toBeUndefined();
   });
+
+  it("extractTokenIdFromLogs: skips log with invalid topic[3] (catch branch), falls back to next valid log", async () => {
+    // First log has an unparseable topic[3] → BigInt throws → catch fires → continue
+    // Second log has a valid topic[3] = 0xff → tokenId = 255n
+    const client = new InkdClient(TEST_CONFIG);
+    const publicClient = makeMockPublicClient({
+      readContract: vi.fn().mockResolvedValue(0n),
+      waitForTransactionReceipt: vi.fn().mockResolvedValue({
+        logs: [
+          { topics: ["0xTransfer", "0x0", "0xuser", "not-a-bigint"] }, // ← triggers catch
+          { topics: ["0xTransfer", "0x0", "0xuser", "0xff"] },          // ← valid: 255n
+        ],
+      }),
+    });
+    const walletClient = makeMockWalletClient();
+    // @ts-expect-error — mock
+    client.connect(walletClient, publicClient);
+    const result = await client.mintToken();
+    expect(result.tokenId).toBe(255n);
+  });
 });
 
 describe("InkdClient — getToken()", () => {
