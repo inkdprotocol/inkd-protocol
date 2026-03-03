@@ -609,6 +609,24 @@ describe("ProjectRegistry — createProject()", () => {
     const { projectId } = await r.createProject({ name: "silent-agent" });
     expect(projectId).toBe(0n);
   });
+
+  it("extractProjectIdFromLogs: skips log with invalid topic[1] (catch branch), returns 0n", async () => {
+    // Log has 2 topics but topic[1] is not a valid BigInt string → catch fires → continue → return 0n
+    const r = new ProjectRegistry(BASE_CONFIG);
+    const pub = makeMockPublicClient();
+    const LOCK = 1_000_000_000_000_000_000n;
+    pub.readContract
+      .mockResolvedValueOnce(LOCK)
+      .mockResolvedValueOnce(LOCK)
+      .mockResolvedValueOnce(LOCK);
+    pub.waitForTransactionReceipt.mockResolvedValue({
+      logs: [{ topics: ["0xProjectCreated", "not-a-valid-bigint"] }], // ← triggers catch
+    });
+    const wlt = makeMockWalletClient();
+    r.connect(wlt as any, pub as any);
+    const { projectId } = await r.createProject({ name: "catch-branch-agent" });
+    expect(projectId).toBe(0n);
+  });
 });
 
 // ─── pushVersion() ────────────────────────────────────────────────────────────
