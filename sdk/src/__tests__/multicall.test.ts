@@ -442,4 +442,30 @@ describe("BatchResult type contract", () => {
     expect(r.data).toBeNull();
     expect(r.error).toBe("boom");
   });
+
+  it("failure with a string (non-Error) error coerces it via String()", async () => {
+    // Covers the `raw.error instanceof Error → false` branch in coerceResult
+    // i.e. `String(raw.error ?? "unknown")` with a defined string value
+    const client = makePublicClient(async () => [
+      // @ts-expect-error — testing non-Error error path in coerceResult
+      { result: undefined, status: "failure" as const, error: "plain string error" },
+    ]);
+    const results = await batchGetProjects(client, REGISTRY, [1n]);
+    expect(results[0].success).toBe(false);
+    expect(results[0].data).toBeNull();
+    expect(results[0].error).toBe("plain string error");
+  });
+
+  it("result with undefined status + undefined result is treated as failure with 'unknown' error", async () => {
+    // Covers the `raw.status === undefined && raw.result === undefined` branch
+    // and the `raw.error ?? "unknown"` fallback (error is also undefined here)
+    const client = makePublicClient(async () => [
+      // @ts-expect-error — testing implicit-failure path (no status, no result)
+      { result: undefined },
+    ]);
+    const results = await batchGetProjects(client, REGISTRY, [1n]);
+    expect(results[0].success).toBe(false);
+    expect(results[0].data).toBeNull();
+    expect(results[0].error).toBe("unknown");
+  });
 });
