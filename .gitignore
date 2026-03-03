@@ -24,3 +24,13 @@ contracts/.gas-snapshot
 # OS
 .DS_Store
 Thumbs.db
+
+# OpenClaw workspace files (agent operating context — not part of repo)
+AGENTS.md
+SOUL.md
+IDENTITY.md
+USER.md
+TOOLS.md
+HEARTBEAT.md
+VOICE.md
+.openclaw/

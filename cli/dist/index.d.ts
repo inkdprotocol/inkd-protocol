@@ -19,5 +19,6 @@
  *   agent lookup   <name>       Find an agent project by name
  *   help                        Show this help message
  */
-export {};
+declare function main(): Promise<void>;
+export { main };
 //# sourceMappingURL=index.d.ts.map
