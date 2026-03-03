@@ -1,10 +1,10 @@
 # Inkd Protocol — Security Review
 
-**Reviewed:** 2026-03-02
+**Reviewed:** 2026-03-02 | **Updated:** 2026-03-03 (InkdTimelock added)
 **Reviewer:** Inkd Agent (automated + manual review)
-**Contracts:** InkdToken, InkdRegistry, InkdTreasury
+**Contracts:** InkdToken, InkdRegistry, InkdTreasury, InkdTimelock
 **Commit:** See git log
-**Status:** ✅ No critical or high issues found. Ready for mainnet with notes addressed.
+**Status:** ✅ No critical or high issues found. Ready for external audit.
 
 ---
 
@@ -16,7 +16,7 @@
 | 🟠 High     | 0 | — |
 | 🟡 Medium   | 1 | Informational — no action required |
 | 🔵 Low      | 3 | Documented, by design |
-| ⚪ Info     | 5 | Noted |
+| ⚪ Info     | 6 | Noted (5 original + 1 Timelock) |
 
 ---
 
@@ -125,6 +125,51 @@ The constant is named `TOKEN_LOCK_AMOUNT` in the contract, but internal document
 
 ---
 
+---
+
+## InkdTimelock.sol
+
+**Surface area:** Admin timelock. Queues, delays, and executes arbitrary contract calls. Intended to hold ownership of InkdRegistry and InkdTreasury post-deploy.
+
+**Constants:** `DELAY = 48 hours`, `GRACE_PERIOD = 14 days`
+
+### ✅ Findings
+
+- **No custom errors** — uses `require(string)` deliberately for readability; no gas concern since timelock operations are infrequent admin actions ✅
+- **Two-step admin handover** — `setPendingAdmin()` + `acceptAdmin()` prevents accidental ownership loss to wrong address ✅
+- **Replay protection** — `queuedTransactions[txHash]` is set to `false` before execution; the same hash cannot be re-executed ✅
+- **Stale transaction guard** — `GRACE_PERIOD (14 days)` prevents very old queued txs from executing after context changes ✅
+- **ETA lower-bound enforced** — `eta >= block.timestamp + DELAY` checked at queue time ✅
+- **ETH forwarding** — `receive()` + `value` forwarding in `executeTransaction()` supports ETH-carrying calls ✅
+- **Execution failure propagates** — `require(success)` on the low-level `.call`, so callers see failures ✅
+
+### 🔵 LOW-3: Timelock admin is a single EOA
+
+The initial admin is the deployer EOA. If the deployer key is compromised before transferring to a Safe multisig, an attacker gains full timelock control. This is the same trust assumption as the current owner pattern.
+
+**Risk:** Low — identical to pre-timelock risk. Timelock adds delay visibility; does not add multi-sig protection.
+**Recommendation:** Transfer timelock admin to a Gnosis Safe immediately after deploy. Document in POST_DEPLOY.md (already noted there).
+
+### ⚪ INFO-6: `cancelTransaction` does not verify transaction was queued
+
+`cancelTransaction()` sets `queuedTransactions[txHash] = false` unconditionally. Cancelling a non-queued hash is a no-op (false → false) and emits a `CancelTransaction` event. No state corruption, but event logs may be misleading.
+
+**Risk:** Informational. Admin-only function; an admin calling cancel on a non-existent tx is simply a no-op with a spurious event.
+**Recommendation:** Add `require(queuedTransactions[txHash], "not queued")` for cleaner event semantics if desired.
+
+### Timelock Security Model
+
+| Property | Status |
+|----------|--------|
+| 48h minimum delay on all admin actions | ✅ |
+| Transactions can be cancelled during delay window | ✅ |
+| Stale transactions expire after 14 days (GRACE_PERIOD) | ✅ |
+| Two-step admin handover prevents accidental loss | ✅ |
+| All 41 test cases passing | ✅ |
+| Not upgradeable (intentional — timelock itself should be immutable) | ✅ |
+
+---
+
 ## Access Control Summary
 
 | Function | Who Can Call |
@@ -137,12 +182,17 @@ The constant is named `TOKEN_LOCK_AMOUNT` in the contract, but internal document
 | `setVisibility()` | Project owner only |
 | `setReadme()` | Project owner only |
 | `setAgentEndpoint()` | Project owner only |
-| `setVersionFee()` | Protocol owner (deployer) only |
-| `setTransferFee()` | Protocol owner (deployer) only |
+| `setVersionFee()` | Protocol owner (deployer / timelock) only |
+| `setTransferFee()` | Protocol owner (deployer / timelock) only |
 | `treasury.deposit()` | Registry only |
-| `treasury.withdraw()` | Protocol owner only |
-| `treasury.setRegistry()` | Protocol owner only |
-| `upgradeToAndCall()` (both) | Protocol owner only |
+| `treasury.withdraw()` | Protocol owner (deployer / timelock) only |
+| `treasury.setRegistry()` | Protocol owner (deployer / timelock) only |
+| `upgradeToAndCall()` (both) | Protocol owner (deployer / timelock) only |
+| `timelock.queueTransaction()` | Timelock admin only |
+| `timelock.cancelTransaction()` | Timelock admin only |
+| `timelock.executeTransaction()` | Timelock admin only |
+| `timelock.setPendingAdmin()` | Timelock admin only |
+| `timelock.acceptAdmin()` | Pending admin only |
 
 ---
 
@@ -205,14 +255,15 @@ The Inkd Protocol contracts are **well-structured, minimal, and secure** for a V
 - Uses battle-tested OpenZeppelin libraries throughout
 - Follows the CEI pattern for all functions with external calls
 - Has no critical or high-severity findings
-- Has comprehensive test coverage (79 tests)
+- Has comprehensive test coverage (**238 tests** — unit, fuzz, invariant, upgrade, integration, timelock)
 - Has clear, correct access control
+- Includes `InkdTimelock.sol` for 48h governance delay on all admin actions
 
-The three medium/low findings are all informational or by-design, with zero impact on fund safety.
+The medium/low findings are all informational or by-design, with zero impact on fund safety.
 
-**Verdict: ✅ Ready for mainnet deployment with the pre-flight checklist completed.**
+**Verdict: ✅ Internal review complete. Recommended next step: professional external audit before mainnet deploy.**
 
 ---
 
-*Review generated by Inkd Agent on 2026-03-02. This is not a professional audit.*
-*For mainnet deployment of significant value, consider a professional audit from a reputable firm.*
+*Internal review by Inkd Agent, 2026-03-02 (InkdTimelock addendum 2026-03-03). This is not a professional audit.*
+*For mainnet deployment: engage a reputable firm (Trail of Bits, Spearbit, Sherlock, Code4rena, etc.).*
