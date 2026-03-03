@@ -202,7 +202,7 @@ cd contracts
 # Build
 forge build
 
-# Run all 63 tests
+# Run all tests (238 contract tests)
 forge test -vvv
 
 # Test coverage

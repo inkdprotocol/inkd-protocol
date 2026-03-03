@@ -27,6 +27,18 @@ pnpm add @inkd/sdk viem
   - [Registry Operations](#registry-operations)
   - [Version Operations](#version-operations)
   - [Collaborator Management](#collaborator-management)
+- [Event Subscriptions](#event-subscriptions)
+  - [watchProjectCreated](#watchprojectcreated)
+  - [watchVersionPushed](#watchversionpushed)
+  - [watchRegistryEvents](#watchregistryevents)
+- [Batch Reads (Multicall)](#batch-reads-multicall)
+  - [batchGetProjects](#batchgetprojects)
+  - [batchGetVersions](#batchgetversions)
+  - [batchGetFees](#batchgetfees)
+  - [batchGetProjectsWithVersions](#batchgetprojectswithversions)
+- [Encryption](#encryption)
+  - [PassthroughEncryption](#passthroughencryption)
+  - [LitEncryptionProvider](#litencryptionprovider-v2)
 - [Types](#types)
 - [Error Handling](#error-handling)
 - [React Hooks](#react-hooks)
@@ -669,10 +681,441 @@ agents.forEach(a => {
 
 ---
 
+---
+
+## Event Subscriptions
+
+Import from `@inkd/sdk/events`. Provides typed, reactive subscriptions to
+`ProjectCreated` and `VersionPushed` — the two core lifecycle events emitted
+by `InkdRegistry.sol`.
+
+Uses viem's `watchContractEvent` under the hood (polls `getLogs` on a
+configurable interval, default ~4 s on most public RPCs).
+
+```typescript
+import {
+  watchProjectCreated,
+  watchVersionPushed,
+  watchRegistryEvents,
+} from "@inkd/sdk/events";
+import { createPublicClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(),
+});
+
+const REGISTRY = "0xYourRegistryAddress";
+```
+
+---
+
+### `watchProjectCreated`
+
+```typescript
+function watchProjectCreated(
+  publicClient: PublicClient,
+  registryAddress: Address,
+  onEvent: (event: ProjectCreatedEvent) => void,
+  filter?: ProjectCreatedFilter
+): Unwatch
+```
+
+Subscribe to `ProjectCreated` events. Returns an unsubscribe function.
+
+**`ProjectCreatedEvent`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `projectId` | `bigint` | On-chain project identifier (auto-incrementing) |
+| `owner` | `Address` | Initial project owner address |
+| `name` | `string` | Project name as stored on-chain |
+| `license` | `string` | SPDX license identifier (e.g. `"MIT"`) |
+| `_log` | `unknown` | Raw viem log metadata (block, tx hash, etc.) |
+
+**`ProjectCreatedFilter`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `owner?` | `Address` | Filter events to a specific owner address |
+
+**Example:**
+
+```typescript
+// Subscribe to all new projects
+const unwatch = watchProjectCreated(publicClient, REGISTRY, (event) => {
+  console.log("New project:", event.projectId, event.name, "by", event.owner);
+});
+
+// Filter to projects created by a specific agent
+const unwatchAgent = watchProjectCreated(
+  publicClient,
+  REGISTRY,
+  (event) => console.log("Agent project created:", event.name),
+  { owner: "0xAgentAddress" }
+);
+
+// Stop watching
+unwatch();
+unwatchAgent();
+```
+
+---
+
+### `watchVersionPushed`
+
+```typescript
+function watchVersionPushed(
+  publicClient: PublicClient,
+  registryAddress: Address,
+  onEvent: (event: VersionPushedEvent) => void,
+  filter?: VersionPushedFilter
+): Unwatch
+```
+
+Subscribe to `VersionPushed` events. Returns an unsubscribe function.
+
+**`VersionPushedEvent`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `projectId` | `bigint` | ID of the project that received the new version |
+| `arweaveHash` | `string` | Arweave transaction hash of the uploaded artifact |
+| `versionTag` | `string` | Human-readable version tag, e.g. `"v1.2.0"` |
+| `pushedBy` | `Address` | Address that called `pushVersion()` |
+| `_log` | `unknown` | Raw viem log metadata |
+
+**`VersionPushedFilter`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `projectId?` | `bigint` | Filter events to a specific project ID |
+
+**Example:**
+
+```typescript
+// Watch all version pushes
+const unwatch = watchVersionPushed(publicClient, REGISTRY, (event) => {
+  console.log(`Project ${event.projectId}: v${event.versionTag} → ${event.arweaveHash}`);
+});
+
+// Watch only project #42
+const unwatchProject = watchVersionPushed(
+  publicClient,
+  REGISTRY,
+  (event) => console.log("Version pushed:", event.versionTag, event.arweaveHash),
+  { projectId: 42n }
+);
+
+unwatch();
+unwatchProject();
+```
+
+---
+
+### `watchRegistryEvents`
+
+Convenience wrapper that starts both `watchProjectCreated` and `watchVersionPushed`
+in one call and returns a single `unwatchAll()` function.
+
+```typescript
+function watchRegistryEvents(
+  publicClient: PublicClient,
+  registryAddress: Address,
+  handlers: {
+    onProjectCreated?: (event: ProjectCreatedEvent) => void;
+    onVersionPushed?:  (event: VersionPushedEvent)  => void;
+    projectCreatedFilter?: ProjectCreatedFilter;
+    versionPushedFilter?:  VersionPushedFilter;
+  }
+): { unwatchAll: Unwatch }
+```
+
+**Example:**
+
+```typescript
+const { unwatchAll } = watchRegistryEvents(publicClient, REGISTRY, {
+  onProjectCreated: (e) => console.log("Created:", e.name),
+  onVersionPushed:  (e) => console.log("Version:", e.versionTag),
+  // Optional: scope version events to one project
+  versionPushedFilter: { projectId: 1n },
+});
+
+// Teardown
+unwatchAll();
+```
+
+---
+
+## Batch Reads (Multicall)
+
+Import from `@inkd/sdk`. Uses **Multicall3**
+(`0xcA11bde05977b3631167028862bE2a173976CA11` — deployed on Base and Base Sepolia)
+to fetch multiple on-chain values in **a single RPC round-trip**, dramatically
+reducing latency when listing or paginating projects.
+
+```typescript
+import {
+  batchGetProjects,
+  batchGetVersions,
+  batchGetFees,
+  batchGetProjectsWithVersions,
+} from "@inkd/sdk";
+import { createPublicClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+
+const publicClient = createPublicClient({ chain: baseSepolia, transport: http() });
+const REGISTRY = "0xYourRegistryAddress";
+```
+
+**`BatchResult<T>`** — result wrapper for individual multicall calls:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | `T \| null` | Decoded value, or `null` if the call reverted |
+| `success` | `boolean` | `true` if the call succeeded |
+| `error?` | `string` | Revert reason or error message (only on failure) |
+
+---
+
+### `batchGetProjects`
+
+```typescript
+async function batchGetProjects(
+  publicClient: PublicClient,
+  registryAddress: Address,
+  projectIds: bigint[]
+): Promise<BatchResult<ProjectData>[]>
+```
+
+Fetch multiple projects by on-chain ID in a single RPC call.
+Non-existent projects return `{ success: false, data: null }`.
+
+**Example:**
+
+```typescript
+const results = await batchGetProjects(publicClient, REGISTRY, [1n, 2n, 3n, 4n, 5n]);
+
+for (const r of results) {
+  if (r.success && r.data) {
+    console.log(`Project: ${r.data.name} (owner: ${r.data.owner})`);
+  } else {
+    console.log("Not found:", r.error);
+  }
+}
+```
+
+---
+
+### `batchGetVersions`
+
+```typescript
+async function batchGetVersions(
+  publicClient: PublicClient,
+  registryAddress: Address,
+  projectIds: bigint[]
+): Promise<BatchResult<VersionData[]>[]>
+```
+
+Fetch all versions for multiple projects in a single RPC call.
+Each element corresponds to the project ID at the same index.
+
+**Example:**
+
+```typescript
+const results = await batchGetVersions(publicClient, REGISTRY, [1n, 2n]);
+
+results.forEach((r, i) => {
+  if (r.success && r.data) {
+    console.log(`Project ${i + 1}: ${r.data.length} version(s)`);
+    const latest = r.data[r.data.length - 1];
+    if (latest) console.log("  Latest:", latest.versionTag, "→", latest.arweaveHash);
+  }
+});
+```
+
+---
+
+### `batchGetFees`
+
+```typescript
+async function batchGetFees(
+  publicClient: PublicClient,
+  registryAddress: Address
+): Promise<RegistryFees>
+```
+
+Fetch `versionFee`, `transferFee`, and `TOKEN_LOCK_AMOUNT` in a single RPC call.
+Useful before any write operation to confirm required fees without extra round-trips.
+
+**`RegistryFees`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `versionFee` | `bigint` | Fee in wei required to push a new version |
+| `transferFee` | `bigint` | Fee in wei required to transfer project ownership |
+| `tokenLockAmount` | `bigint` | `$INKD` tokens locked per project on creation |
+
+**Example:**
+
+```typescript
+const { versionFee, transferFee, tokenLockAmount } = await batchGetFees(publicClient, REGISTRY);
+
+console.log("Version fee:", versionFee, "wei");
+console.log("Transfer fee:", transferFee, "wei");
+console.log("Token lock:", tokenLockAmount, "INKD (raw)");
+
+// Check before pushing
+if (balance >= versionFee) {
+  await inkd.pushVersion(projectId, { arweaveHash, versionTag });
+}
+```
+
+---
+
+### `batchGetProjectsWithVersions`
+
+```typescript
+async function batchGetProjectsWithVersions(
+  publicClient: PublicClient,
+  registryAddress: Address,
+  projectIds: bigint[]
+): Promise<Array<{ project: BatchResult<ProjectData>; versions: BatchResult<VersionData[]> }>>
+```
+
+Hydrate projects **and** their versions in two RPC calls total (one multicall
+for projects, one for versions), regardless of how many IDs you pass.
+Compared to fetching each individually, this reduces `2N + N` calls → 2 calls.
+
+**Example:**
+
+```typescript
+const hydrated = await batchGetProjectsWithVersions(publicClient, REGISTRY, [1n, 2n, 3n]);
+
+for (const { project, versions } of hydrated) {
+  if (!project.success || !project.data) continue;
+  const vCount = versions.data?.length ?? 0;
+  console.log(`${project.data.name}: ${vCount} version(s)`);
+}
+```
+
+---
+
+## Encryption
+
+Import from `@inkd/sdk/encryption`. Provides the encryption provider interface and
+both the V1 passthrough and the V2 Lit Protocol implementation.
+
+```typescript
+import {
+  PassthroughEncryption,
+  LitEncryptionProvider,
+} from "@inkd/sdk/encryption";
+import type { IEncryptionProvider } from "@inkd/sdk/encryption";
+```
+
+---
+
+### `PassthroughEncryption`
+
+**V1 — data is stored unencrypted on Arweave.**
+Satisfies the `IEncryptionProvider` interface; swappable with
+`LitEncryptionProvider` when V2 ships.
+
+```typescript
+class PassthroughEncryption implements IEncryptionProvider {
+  async encrypt(data: Uint8Array, tokenId: bigint, contractAddress: Address): Promise<EncryptedData>
+  async decrypt(encryptedData: EncryptedData, tokenId: bigint, contractAddress: Address): Promise<Uint8Array>
+}
+```
+
+**Example:**
+
+```typescript
+const enc = new PassthroughEncryption();
+
+// Encrypt (no-op in V1 — data passes through unchanged)
+const encrypted = await enc.encrypt(myData, 0n, "0x0");
+
+// Decrypt (no-op in V1 — returns ciphertext as-is)
+const decrypted = await enc.decrypt(encrypted, 0n, "0x0");
+
+// decrypted === myData
+```
+
+---
+
+### `LitEncryptionProvider` (V2)
+
+**V2 stub — Lit Protocol token-gated encryption.** The interface is finalized;
+the implementation throws `EncryptionError` until V2 ships.
+Use `PassthroughEncryption` for all V1 work.
+
+```typescript
+class LitEncryptionProvider implements IEncryptionProvider {
+  constructor(config: EncryptionConfig)
+  async connect(): Promise<void>
+  async encryptForToken(data: Uint8Array, tokenId: bigint, contractAddress?: Address): Promise<EncryptedData>
+  async decryptWithToken(encryptedData: EncryptedData, tokenId: bigint, contractAddress?: Address): Promise<Uint8Array>
+  async encrypt(...): Promise<EncryptedData>   // throws — V2 only
+  async decrypt(...): Promise<Uint8Array>       // throws — V2 only
+}
+```
+
+**`EncryptionConfig`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `network` | `string` | Lit network name (e.g. `"datil"`) |
+| `chain` | `string` | Chain name for access control conditions (e.g. `"base"`) |
+
+**V2 preview (not yet active):**
+
+```typescript
+// Future usage — currently throws EncryptionError
+const encryption = new LitEncryptionProvider({ network: "datil", chain: "base" });
+await encryption.connect();
+
+// Encrypt data so only the ERC-721 InkdToken owner can decrypt
+const encrypted = await encryption.encryptForToken(data, tokenId, contractAddress);
+
+// Decrypt — requires caller to hold the token
+const decrypted = await encryption.decryptWithToken(encrypted, tokenId, contractAddress);
+```
+
+> **Note:** `LitEncryptionProvider` is a V2 feature. All methods currently throw
+> `EncryptionError("LitEncryptionProvider is a V2 feature. Use PassthroughEncryption for V1.")`.
+> The interface is stable — you can write code against it today and swap it in when V2 launches.
+
+---
+
+**`IEncryptionProvider` interface:**
+
+```typescript
+interface IEncryptionProvider {
+  encrypt(data: Uint8Array, tokenId: bigint, contractAddress: Address): Promise<EncryptedData>;
+  decrypt(encryptedData: EncryptedData, tokenId: bigint, contractAddress: Address): Promise<Uint8Array>;
+}
+```
+
+**`EncryptedData`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ciphertext` | `Uint8Array` | The (encrypted) payload |
+| `encryptedSymmetricKey` | `string` | Lit-encrypted symmetric key (empty in V1) |
+| `accessControlConditions` | `unknown[]` | ERC-721 ownership conditions (empty in V1) |
+
+---
+
 ## Changelog
 
 | Version | Changes |
 |---------|---------|
+| `0.10.2` | SDK branch coverage 100% — arweave.ts + multicall.ts edge paths |
+| `0.10.1` | Batch reads (multicall.ts), event subscriptions (events.ts), SDK v0.2 complete |
+| `0.10.0` | LitEncryptionProvider + PassthroughEncryption; InkdClient.connectArweave |
 | `0.1.0` | Initial release — InkdClient, TypeScript types, React hooks |
 
 ---
