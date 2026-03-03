@@ -1,16 +1,19 @@
-# Inkd Protocol -- API Reference
+# Inkd Protocol — API Reference
 
-Complete SDK reference for `@inkd/sdk`.
+Complete reference for `@inkd/sdk`. The SDK wraps the Inkd Protocol smart contracts on Base — a permanent, on-chain project registry designed for AI agents and developers.
+
+> **Protocol model:** Lock 1 `$INKD` → register a project → push versions to Arweave → own it forever on-chain.
 
 ---
 
 ## Table of Contents
 
 - [InkdClient](#inkdclient)
+- [ADDRESSES](#addresses)
+- [Event Subscriptions](#event-subscriptions)
+- [Multicall Batch Reads](#multicall-batch-reads)
 - [ArweaveClient](#arweaveclient)
-- [AgentMemory](#agentmemory)
 - [Encryption](#encryption)
-- [React Hooks](#react-hooks)
 - [Errors](#errors)
 - [Types](#types)
 
@@ -18,416 +21,639 @@ Complete SDK reference for `@inkd/sdk`.
 
 ## InkdClient
 
-Main client for interacting with all three Inkd contracts.
+Main SDK client. Wraps `InkdRegistry` (project creation, versioning, transfers) and `InkdToken` ($INKD allowance helpers).
 
 ### Constructor
 
 ```typescript
-new InkdClient(config: InkdClientConfig)
+import { InkdClient } from "@inkd/sdk";
+
+const inkd = new InkdClient(opts: InkdClientOptions);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `config.tokenAddress` | `` `0x${string}` `` | InkdToken proxy address |
-| `config.vaultAddress` | `` `0x${string}` `` | InkdVault proxy address |
-| `config.registryAddress` | `` `0x${string}` `` | InkdRegistry proxy address |
-| `config.chainId` | `8453 \| 84532` | Base Mainnet or Base Sepolia |
-
-### Connection Methods
-
-#### `connect(walletClient, publicClient)`
-
-Connect viem clients for on-chain interaction.
+### `InkdClientOptions`
 
 ```typescript
-inkd.connect(walletClient, publicClient);
+interface InkdClientOptions {
+  walletClient: WalletClient;   // viem WalletClient (connected to Base / Base Sepolia)
+  network?: "mainnet" | "testnet"; // default: "testnet"
+  rpcUrl?: string;              // optional custom RPC URL
+}
 ```
 
-#### `connectArweave(privateKey)`
-
-Connect Arweave storage client for file uploads via Irys.
+**Example — Base Sepolia (testnet):**
 
 ```typescript
-await inkd.connectArweave("0xPrivateKey");
+import { InkdClient } from "@inkd/sdk";
+import { createWalletClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
+
+const account = privateKeyToAccount("0xYOUR_PRIVATE_KEY");
+const walletClient = createWalletClient({
+  account,
+  chain: baseSepolia,
+  transport: http(),
+});
+
+const inkd = new InkdClient({ walletClient, network: "testnet" });
 ```
 
-#### `setEncryptionProvider(provider)`
-
-Set a custom encryption provider (V2 Lit Protocol).
+**Custom RPC:**
 
 ```typescript
-inkd.setEncryptionProvider(litProvider);
+const inkd = new InkdClient({
+  walletClient,
+  network: "testnet",
+  rpcUrl: "https://base-sepolia.g.alchemy.com/v2/YOUR_KEY",
+});
 ```
 
-### Token Operations
+---
 
-#### `mintToken(options?) -> { hash, tokenId }`
+### Token Helpers
 
-Mint a new InkdToken. Pays the configured mint price.
+#### `approveToken(amount?): Promise<Hash>`
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `options.quantity` | `number?` | Batch mint quantity (max 10) |
+Approve `InkdRegistry` to spend `$INKD` from the connected wallet. Required before `createProject`.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `amount` | `bigint` | `parseEther("1")` | Amount in wei to approve |
 
 ```typescript
-const { tokenId } = await inkd.mintToken();
-const { tokenId } = await inkd.mintToken({ quantity: 5 }); // batch
+// Approve exactly 1 $INKD (default — enough for one project)
+const txHash = await inkd.approveToken();
+
+// Approve 10 $INKD (for multiple projects)
+import { parseEther } from "viem";
+const txHash = await inkd.approveToken(parseEther("10"));
 ```
 
-#### `getToken(tokenId) -> InkdTokenData`
+#### `tokenBalance(address?): Promise<bigint>`
 
-Get full token data.
+Get the `$INKD` balance of an address (wei).
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `address` | `Address?` | connected wallet | Address to query |
 
 ```typescript
-const token = await inkd.getToken(42n);
+const balance = await inkd.tokenBalance();
+// e.g. 5000000000000000000n  →  5 $INKD
+
+const other = await inkd.tokenBalance("0xSomeAddress");
+```
+
+---
+
+### Project Operations
+
+#### `createProject(opts): Promise<Hash>`
+
+Register a new project on-chain. Locks 1 `$INKD` token (must call `approveToken` first).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `opts.name` | `string` | ✅ | Project name |
+| `opts.description` | `string` | ✅ | Short description |
+| `opts.license` | `string` | — | SPDX identifier (default: `"MIT"`) |
+| `opts.readmeHash` | `string` | — | Arweave hash of README (default: `""`) |
+| `opts.isPublic` | `boolean` | — | Public visibility (default: `true`) |
+| `opts.isAgent` | `boolean` | — | Mark as an AI agent project (default: `false`) |
+| `opts.agentEndpoint` | `string` | — | Agent HTTP endpoint URL (default: `""`) |
+
+**Returns:** Transaction hash. Use `waitForTransactionReceipt` to get the emitted `projectId`.
+
+```typescript
+const hash = await inkd.createProject({
+  name: "my-agent",
+  description: "An autonomous agent for on-chain tasks",
+  license: "MIT",
+  isPublic: true,
+  isAgent: true,
+  agentEndpoint: "https://my-agent.example.com",
+});
+```
+
+#### `pushVersion(projectId, opts): Promise<Hash>`
+
+Push a new version to an existing project. Pays the `versionFee` (0.001 ETH on testnet) automatically.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `projectId` | `bigint` | ✅ | ID of the project |
+| `opts.arweaveHash` | `string` | ✅ | Arweave transaction hash of the artifact |
+| `opts.versionTag` | `string` | ✅ | Version label, e.g. `"v1.2.0"` |
+| `opts.changelog` | `string` | — | Human-readable changelog (default: `""`) |
+
+```typescript
+const hash = await inkd.pushVersion(42n, {
+  arweaveHash: "abc123ArweaveTxId",
+  versionTag: "v0.9.0",
+  changelog: "Improved reasoning loop, fixed rate limiting",
+});
+```
+
+#### `getProject(projectId): Promise<ProjectStruct>`
+
+Read project data from the registry.
+
+```typescript
+const project = await inkd.getProject(42n);
 // {
-//   tokenId: 42n,
+//   id: 42n,
+//   name: "my-agent",
+//   description: "...",
+//   license: "MIT",
+//   readmeHash: "abc123...",
+//   agentEndpoint: "https://my-agent.example.com",
 //   owner: "0x...",
-//   mintedAt: 1709251200n,
-//   inscriptionCount: 7n,
-//   uri: "data:application/json;base64,..."
+//   isAgent: true,
+//   isPublic: true,
+//   createdAt: 1709251200n,
+//   versionCount: 3n,
+//   exists: true,
 // }
 ```
 
-#### `getTokensByOwner(address) -> InkdTokenData[]`
+#### `getVersions(projectId): Promise<VersionStruct[]>`
 
-Get all tokens owned by an address.
+Get all versions pushed to a project, ordered oldest-first.
 
-#### `hasInkdToken(address) -> boolean`
+```typescript
+const versions = await inkd.getVersions(42n);
+// [{
+//   projectId: 42n,
+//   arweaveHash: "abc123...",
+//   versionTag: "v0.9.0",
+//   changelog: "Initial release",
+//   pushedBy: "0x...",
+//   pushedAt: 1709251200n,
+// }, ...]
+```
 
-Check if an address holds at least one InkdToken.
+#### `getVersionFee(): Promise<bigint>`
 
-### Inscription Operations
+Fetch the current `versionFee` in wei from the registry.
 
-#### `inscribe(tokenId, data, options?) -> InscribeResult`
+```typescript
+const fee = await inkd.getVersionFee();
+// 1000000000000000n  →  0.001 ETH
+```
 
-Upload data to Arweave and inscribe on token.
+#### `transferProject(projectId, newOwner): Promise<Hash>`
+
+Transfer project ownership to a new address. Pays the `transferFee` (0.005 ETH on testnet) automatically.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `tokenId` | `bigint` | Token to inscribe on |
-| `data` | `Buffer \| Uint8Array \| string` | File data |
-| `options.contentType` | `string?` | MIME type (default: `application/octet-stream`) |
-| `options.name` | `string?` | Human-readable name |
-| `options.value` | `bigint?` | ETH value to send |
-
-**Returns**: `{ hash, inscriptionIndex, upload: { hash, url, size } }`
-
-#### `getInscriptions(tokenId) -> Inscription[]`
-
-Get all inscriptions on a token.
+| `projectId` | `bigint` | Project to transfer |
+| `newOwner` | `Address` | New owner wallet address |
 
 ```typescript
-const inscriptions = await inkd.getInscriptions(42n);
-// [{
-//   arweaveHash: "abc123...",
-//   contentType: "application/json",
-//   size: 1024n,
-//   name: "memory-001",
-//   createdAt: 1709251200n,
-//   isRemoved: false,
-//   version: 1n
-// }]
+const hash = await inkd.transferProject(42n, "0xNewOwnerAddress");
 ```
 
-#### `removeInscription(tokenId, index) -> { hash }`
+#### `getAgentProjects(offset?, limit?): Promise<readonly bigint[]>`
 
-Soft-delete an inscription. Data remains on Arweave but is flagged as removed on-chain.
+Enumerate all projects marked as `isAgent: true`. Supports pagination.
 
-#### `updateInscription(tokenId, index, newData, contentType?) -> { hash }`
-
-Create a new version of an inscription. Uploads new data to Arweave.
-
-### Access Operations
-
-#### `grantAccess(tokenId, grantee, duration) -> { hash }`
-
-Grant temporary read access. `duration` is in seconds.
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `offset` | `bigint` | `0n` | Skip this many results |
+| `limit` | `bigint` | `100n` | Max results to return |
 
 ```typescript
-await inkd.grantAccess(42n, "0xAgent2" as `0x${string}`, 86400); // 24 hours
+// First page
+const ids = await inkd.getAgentProjects();
+
+// Page 2 (100 per page)
+const page2 = await inkd.getAgentProjects(100n, 100n);
 ```
 
-#### `revokeAccess(tokenId, grantee) -> { hash }`
+---
 
-Revoke a previously granted access.
+## ADDRESSES
 
-### Marketplace Operations
-
-#### `listForSale(tokenId, price) -> { hash }`
-
-List a token for sale on InkdRegistry.
-
-#### `buyToken(tokenId) -> { hash }`
-
-Purchase a listed token. Sends the listing price automatically.
-
-### Utility
-
-#### `estimateInscribeCost(fileSize) -> InscribeCostEstimate`
-
-Estimate the cost to inscribe a file.
+Exported constant with deployed contract addresses. Populated post-deploy.
 
 ```typescript
-const cost = await inkd.estimateInscribeCost(1024);
-// { arweaveCost: 100000n, protocolFee: 1000n, totalCost: 101000n }
+import { ADDRESSES } from "@inkd/sdk";
+
+// {
+//   mainnet: { token: "0x...", registry: "0x...", treasury: "0x..." },
+//   testnet: { token: "0x...", registry: "0x...", treasury: "0x..." },
+// }
+console.log(ADDRESSES.testnet.registry);
 ```
 
-#### `getStats() -> ProtocolStats`
+> **Note:** Addresses are set at deployment. Check `DEPLOYED.md` in the repo root for the latest values after each deploy.
 
-Get protocol-wide statistics.
+---
+
+## Event Subscriptions
+
+Real-time subscriptions to on-chain events via viem's `watchContractEvent`. Polls `getLogs` on an interval (default 4 s on public RPCs).
 
 ```typescript
-const stats = await inkd.getStats();
-// { totalTokens: 150n, totalInscriptions: 2340n, totalVolume: 5000000n, totalSales: 47n }
+import { watchProjectCreated, watchVersionPushed, watchRegistryEvents } from "@inkd/sdk";
+import { createPublicClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+
+const publicClient = createPublicClient({ chain: baseSepolia, transport: http() });
+const REGISTRY = "0xYourRegistryAddress";
+```
+
+### `watchProjectCreated(publicClient, registryAddress, onEvent, filter?): Unwatch`
+
+Subscribe to `ProjectCreated` events.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `publicClient` | `PublicClient` | viem public client |
+| `registryAddress` | `Address` | InkdRegistry address |
+| `onEvent` | `(e: ProjectCreatedEvent) => void` | Callback |
+| `filter?.owner` | `Address?` | Only events from this owner |
+
+```typescript
+const unwatch = watchProjectCreated(publicClient, REGISTRY, (event) => {
+  console.log("New project:", event.projectId, event.name, "by", event.owner);
+});
+
+// Filter to a specific owner
+const unwatch2 = watchProjectCreated(
+  publicClient, REGISTRY,
+  (e) => console.log(e),
+  { owner: "0xMyAddress" }
+);
+
+unwatch(); // Stop watching
+```
+
+**`ProjectCreatedEvent`:**
+
+```typescript
+interface ProjectCreatedEvent {
+  projectId: bigint;
+  owner: Address;
+  name: string;
+  license: string;
+  _log: unknown; // raw viem log (block, txHash, logIndex, etc.)
+}
+```
+
+---
+
+### `watchVersionPushed(publicClient, registryAddress, onEvent, filter?): Unwatch`
+
+Subscribe to `VersionPushed` events.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filter?.projectId` | `bigint?` | Only versions for this project |
+
+```typescript
+const unwatch = watchVersionPushed(publicClient, REGISTRY, (event) => {
+  console.log("Version:", event.versionTag, "→", event.arweaveHash);
+}, { projectId: 42n });
+```
+
+**`VersionPushedEvent`:**
+
+```typescript
+interface VersionPushedEvent {
+  projectId: bigint;
+  arweaveHash: string;
+  versionTag: string;
+  pushedBy: Address;
+  _log: unknown;
+}
+```
+
+---
+
+### `watchRegistryEvents(publicClient, registryAddress, handlers): { unwatchAll }`
+
+Watch both event types in one call. Only sets up the watchers whose handlers are provided.
+
+```typescript
+const { unwatchAll } = watchRegistryEvents(publicClient, REGISTRY, {
+  onProjectCreated: (e) => console.log("Created:", e.name),
+  onVersionPushed:  (e) => console.log("Version:", e.versionTag),
+  // Optional per-event filters:
+  projectCreatedFilter: { owner: "0x..." },
+  versionPushedFilter:  { projectId: 42n },
+});
+
+unwatchAll(); // Stop both
+```
+
+---
+
+### `Unwatch`
+
+```typescript
+type Unwatch = () => void;
+```
+
+---
+
+## Multicall Batch Reads
+
+Fetch multiple projects or versions in a single RPC round-trip using Multicall3 (`0xcA11bde05977b3631167028862bE2a173976CA11`, deployed on Base and Base Sepolia).
+
+```typescript
+import { batchGetProjects, batchGetVersions, batchGetFees, batchGetProjectsWithVersions } from "@inkd/sdk";
+```
+
+### `batchGetProjects(publicClient, registryAddress, projectIds): Promise<BatchResult<ProjectData>[]>`
+
+Fetch multiple projects in one call.
+
+```typescript
+const results = await batchGetProjects(publicClient, REGISTRY, [1n, 2n, 3n]);
+
+for (const r of results) {
+  if (r.success) {
+    console.log(r.data.name, r.data.owner);
+  } else {
+    console.warn("Failed:", r.error);
+  }
+}
+```
+
+### `batchGetVersions(publicClient, registryAddress, projectIds): Promise<BatchResult<VersionData[]>[]>`
+
+Fetch all versions for multiple projects in one call.
+
+```typescript
+const results = await batchGetVersions(publicClient, REGISTRY, [1n, 2n]);
+// results[0].data  →  VersionData[] for project 1
+// results[1].data  →  VersionData[] for project 2
+```
+
+### `batchGetFees(publicClient, registryAddress): Promise<RegistryFees>`
+
+Fetch `versionFee`, `transferFee`, and `tokenLockAmount` in one multicall.
+
+```typescript
+const fees = await batchGetFees(publicClient, REGISTRY);
+// {
+//   versionFee: 1000000000000000n,    // 0.001 ETH
+//   transferFee: 5000000000000000n,   // 0.005 ETH
+//   tokenLockAmount: 1000000000000000000n, // 1 $INKD
+// }
+```
+
+### `batchGetProjectsWithVersions(publicClient, registryAddress, projectIds): Promise<{ project, versions }[]>`
+
+Fetch full project structs **and** their version arrays together.
+
+```typescript
+const data = await batchGetProjectsWithVersions(publicClient, REGISTRY, [1n, 2n]);
+// data[0].project  →  ProjectData
+// data[0].versions →  VersionData[]
+```
+
+---
+
+### Batch Types
+
+```typescript
+interface BatchResult<T> {
+  data: T | null;    // Decoded value, or null if call reverted
+  success: boolean;
+  error?: string;    // Revert reason if success === false
+}
+
+interface ProjectData {
+  id: bigint;
+  name: string;
+  description: string;
+  license: string;
+  readmeHash: string;
+  owner: Address;
+  isPublic: boolean;
+  isAgent: boolean;
+  agentEndpoint: string;
+  createdAt: bigint;
+  versionCount: bigint;
+  exists: boolean;
+}
+
+interface VersionData {
+  projectId: bigint;
+  arweaveHash: string;
+  versionTag: string;
+  changelog: string;
+  pushedBy: Address;
+  pushedAt: bigint;
+}
+
+interface RegistryFees {
+  versionFee: bigint;      // wei per version push
+  transferFee: bigint;     // wei per transfer
+  tokenLockAmount: bigint; // $INKD locked per project
+}
 ```
 
 ---
 
 ## ArweaveClient
 
-Direct Arweave interaction via Irys.
+Direct Arweave storage via [Irys](https://irys.xyz). Used for uploading artifacts before calling `pushVersion`.
+
+> **Peer dependency:** `@irys/sdk` must be installed separately. It is lazily imported on first `connect()` call.
 
 ### Constructor
 
 ```typescript
-new ArweaveClient(irysUrl: string, privateKey: string, gateway?: string)
+import { ArweaveClient } from "@inkd/sdk";
+
+const arweave = new ArweaveClient(
+  irysUrl: string,       // e.g. "https://node2.irys.xyz"
+  privateKey: string,    // Ethereum private key (0x...)
+  gateway?: string       // default: "https://arweave.net"
+);
 ```
 
 ### Methods
 
-#### `connect()`
+#### `connect(): Promise<void>`
 
-Initialize Irys client. Must be called before uploading.
+Initialize the Irys client. Must be called before any upload.
 
-#### `uploadFile(data, contentType, tags?) -> UploadResult`
+```typescript
+await arweave.connect();
+```
 
-Upload data to Arweave.
+#### `uploadFile(data, contentType, tags?): Promise<UploadResult>`
 
-**Returns**: `{ hash: string, url: string, size: number }`
+Upload data to Arweave via Irys.
 
-#### `uploadData(data, contentType, tags?) -> UploadResult`
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `Buffer \| Uint8Array` | File bytes |
+| `contentType` | `string` | MIME type (e.g. `"application/json"`) |
+| `tags` | `Record<string, string>?` | Optional Arweave tags |
 
-Alias for `uploadFile()`.
+**Returns:** `{ hash: string, url: string, size: number }`
 
-#### `getFile(hash) -> Buffer`
+```typescript
+const result = await arweave.uploadFile(
+  Buffer.from(JSON.stringify({ version: "v0.9.0" })),
+  "application/json",
+  { "App-Name": "inkd-protocol" }
+);
+// result.hash  →  use as arweaveHash in pushVersion()
+// result.url   →  "https://arweave.net/<hash>"
+```
+
+`uploadData()` is an alias for `uploadFile()`.
+
+#### `downloadData(hash): Promise<Buffer>`
 
 Download data from Arweave by transaction hash.
 
-#### `downloadData(hash) -> Buffer`
-
-Alias for `getFile()`.
-
-#### `getUrl(hash) -> string`
-
-Get the full gateway URL for a hash.
-
-#### `getUploadPrice(size) -> bigint`
-
-Get the upload price for a given file size in bytes.
-
-#### `uploadEncrypted(data, contentType, encrypt) -> UploadResult`
-
-Upload encrypted data. Accepts an encryption function.
-
----
-
-## AgentMemory
-
-Agent memory system -- store your brain as inscriptions.
-
-### Constructor
-
 ```typescript
-new AgentMemory(agentId: string, options?: {
-  client?: IInkdClient;
-  arweave?: IArweaveClient;
-  defaultTokenId?: bigint;
-  dataDir?: string;
-})
+const buf = await arweave.downloadData("abc123...");
+const json = JSON.parse(buf.toString("utf-8"));
 ```
 
-If `client` is provided and `defaultTokenId` is set, memories are inscribed on-chain. Otherwise operates in local-only mode.
+`getFile()` is an alias for `downloadData()`.
 
-### Methods
+#### `getUrl(hash): string`
 
-#### `save(key, data, metadata?) -> { tokenId, inscriptionIndex }`
+Get the full gateway URL for an Arweave hash (synchronous).
 
-Save a memory. Inscribes to InkdToken if client is connected.
+```typescript
+const url = arweave.getUrl("abc123...");
+// "https://arweave.net/abc123..."
+```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `key` | `string` | Unique memory key |
-| `data` | `unknown` | Any serializable data |
-| `metadata.tags` | `string[]?` | Tags for search |
-| `metadata.category` | `MemoryCategory?` | Category (default: `"knowledge"`) |
-| `metadata.importance` | `number?` | 0-100 (default: `50`) |
+#### `getUploadPrice(bytes): Promise<bigint>`
 
-#### `load(tokenId, index) -> unknown | null`
+Estimate the Irys upload price in atomic units for a given file size.
 
-Load memory by token ID and inscription index. Checks local cache first, then fetches from Arweave.
+```typescript
+const price = await arweave.getUploadPrice(1024 * 1024); // 1 MB
+```
 
-#### `loadByKey(key) -> unknown | null`
+#### `uploadEncrypted(data, contentType, encrypt): Promise<UploadResult>`
 
-Load memory by key (local lookup).
+Upload encrypted data. Accepts a custom encrypt function.
 
-#### `update(tokenId, index, newData) -> void`
-
-Update memory. Creates a new version on-chain.
-
-#### `search(query, tags?) -> Memory[]`
-
-Search memories by text, tags, category, or importance.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `query.text` | `string?` | Full-text search across key, data, and tags |
-| `query.tags` | `string[]?` | Filter by tags (OR match) |
-| `query.category` | `MemoryCategory?` | Filter by category |
-| `query.minImportance` | `number?` | Minimum importance threshold |
-| `query.limit` | `number?` | Max results |
-
-Results are sorted by `importance + accessCount * 2` (most relevant first).
-
-#### `exportBrain(tokenId?) -> BrainExport`
-
-Export entire brain with metadata. Optionally filter by token ID.
-
-#### `importBrain(tokenId, fromAddress) -> number`
-
-Import memories from another agent's token. Returns count of memories imported.
-
-#### `checkpoint(label) -> Checkpoint`
-
-Save a snapshot of the current brain state. Optionally inscribes a checkpoint manifest on-chain.
-
-#### `restore(checkpointId) -> void`
-
-Restore the brain to a previous checkpoint. Clears current memories and loads from snapshot.
-
-#### `getCheckpoints() -> Checkpoint[]`
-
-Get all saved checkpoints.
-
-#### `setDefaultTokenId(tokenId) -> void`
-
-Set the default token ID for future inscriptions.
-
-#### `delete(key) -> void`
-
-Delete a memory locally.
-
-#### `count() -> number`
-
-Get total memory count.
-
-#### `keys() -> string[]`
-
-Get all memory keys.
-
-#### `summary()`
-
-Get agent summary with category breakdown and top tags.
+```typescript
+const result = await arweave.uploadEncrypted(
+  rawData,
+  "application/octet-stream",
+  async (data) => myEncrypt(data)
+);
+```
 
 ---
 
 ## Encryption
 
-### PassthroughEncryption
+Pluggable encryption for Arweave-stored data. V1 ships with passthrough (no encryption). V2 adds Lit Protocol token-gating.
 
-V1 default -- no encryption. Data stored as-is on Arweave.
-
-```typescript
-const encryption = new PassthroughEncryption();
-```
-
-### IEncryptionProvider Interface
+### `IEncryptionProvider`
 
 ```typescript
 interface IEncryptionProvider {
-  encrypt(data: Uint8Array, tokenId: bigint, contractAddress: `0x${string}`) -> Promise<EncryptedData>;
-  decrypt(encryptedData: EncryptedData, tokenId: bigint, contractAddress: `0x${string}`) -> Promise<Uint8Array>;
+  encrypt(
+    data: Uint8Array,
+    tokenId: bigint,
+    contractAddress: Address
+  ): Promise<EncryptedData>;
+
+  decrypt(
+    encryptedData: EncryptedData,
+    tokenId: bigint,
+    contractAddress: Address
+  ): Promise<Uint8Array>;
 }
 ```
 
-V2 will add Lit Protocol integration for token-gated decryption.
+### `PassthroughEncryption` (V1 default)
 
----
-
-## React Hooks
-
-### `useInkd(config)`
-
-Main hook. Returns full client with all operations.
+Stores data unencrypted on Arweave. No configuration required.
 
 ```typescript
-const {
-  client,          // InkdClient instance
-  connect,         // (wallet, public) => void
-  connectArweave,  // (privateKey) => Promise
-  mintToken,       // (options?) => Promise<{ tokenId }>
-  inscribe,        // (tokenId, data, options?) => Promise
-  getToken,        // (tokenId) => Promise<InkdTokenData>
-  getInscriptions, // (tokenId) => Promise<Inscription[]>
-  hasInkdToken,    // (address) => Promise<boolean>
-  getStats,        // () => Promise<ProtocolStats>
-  error,           // string | null
-} = useInkd(config);
+import { PassthroughEncryption } from "@inkd/sdk";
+
+const encryption = new PassthroughEncryption();
+// Data round-trips unchanged
 ```
 
-### `useToken(client, tokenId)`
+### `LitEncryptionProvider` (V2 — Lit Protocol)
 
-Fetches single token data with loading/error states.
+Encrypts data so only the ERC-721 InkdToken owner can decrypt it via Lit Protocol access control conditions.
 
 ```typescript
-const { token, loading, error, refetch } = useToken(client, 42n);
+import { LitEncryptionProvider } from "@inkd/sdk";
+
+const encryption = new LitEncryptionProvider({ network: "datil", chain: "base" });
+await encryption.connect();
+
+inkd.setEncryptionProvider(encryption);
 ```
 
-### `useInscriptions(client, tokenId)`
-
-Fetches inscriptions for a token.
-
-```typescript
-const { inscriptions, activeCount, loading, error, refetch } = useInscriptions(client, 42n);
-```
-
-### `useInkdHolder(client, address)`
-
-Checks if an address holds an InkdToken.
-
-```typescript
-const { isHolder, loading, error, refetch } = useInkdHolder(client, "0x...");
-```
+> **Note:** `LitEncryptionProvider` is a stub in the current SDK. Full Lit Protocol integration ships in V2.
 
 ---
 
 ## Errors
 
-All errors extend `InkdError` with a `code` field:
-
-| Error | Code | When |
-|-------|------|------|
-| `NotInkdHolder` | `NOT_INKD_HOLDER` | Wallet has no InkdToken |
-| `InsufficientFunds` | `INSUFFICIENT_FUNDS` | Not enough ETH |
-| `TokenNotFound` | `TOKEN_NOT_FOUND` | Token doesn't exist |
-| `InscriptionNotFound` | `INSCRIPTION_NOT_FOUND` | Inscription doesn't exist |
-| `NotTokenOwner` | `NOT_TOKEN_OWNER` | Not the token owner |
-| `ClientNotConnected` | `CLIENT_NOT_CONNECTED` | No viem client |
-| `ArweaveNotConnected` | `ARWEAVE_NOT_CONNECTED` | No Arweave client |
-| `TransactionFailed` | `TRANSACTION_FAILED` | On-chain TX failed |
-| `MaxSupplyReached` | `MAX_SUPPLY_REACHED` | 10,000 tokens minted |
-| `EncryptionError` | `ENCRYPTION_ERROR` | Encryption/decryption failed |
-| `UploadError` | `UPLOAD_ERROR` | Arweave upload failed |
+All errors extend `InkdError` with a `.code` string field.
 
 ```typescript
-import { NotInkdHolder, InsufficientFunds } from "@inkd/sdk";
+import { InkdError, ClientNotConnected, UploadError } from "@inkd/sdk";
+```
+
+| Error class | Code | Thrown when |
+|-------------|------|-------------|
+| `ClientNotConnected` | `CLIENT_NOT_CONNECTED` | `walletClient` not connected |
+| `ArweaveNotConnected` | `ARWEAVE_NOT_CONNECTED` | `ArweaveClient.connect()` not called |
+| `TransactionFailed` | `TRANSACTION_FAILED` | On-chain TX reverted |
+| `InsufficientFunds` | `INSUFFICIENT_FUNDS` | Not enough ETH for fees |
+| `UploadError` | `UPLOAD_ERROR` | Arweave/Irys upload failed |
+| `EncryptionError` | `ENCRYPTION_ERROR` | Encryption/decryption failed |
+| `NotInkdHolder` | `NOT_INKD_HOLDER` | Address holds no InkdToken (legacy) |
+| `TokenNotFound` | `TOKEN_NOT_FOUND` | Token ID doesn't exist (legacy) |
+| `InscriptionNotFound` | `INSCRIPTION_NOT_FOUND` | Inscription index out of range (legacy) |
+| `NotTokenOwner` | `NOT_TOKEN_OWNER` | Caller is not the token owner (legacy) |
+| `MaxSupplyReached` | `MAX_SUPPLY_REACHED` | 10,000 token cap hit (legacy) |
+
+```typescript
+import { UploadError, TransactionFailed } from "@inkd/sdk";
 
 try {
-  await inkd.inscribe(42n, data);
+  await inkd.pushVersion(42n, { arweaveHash: "...", versionTag: "v1.0.0" });
 } catch (e) {
-  if (e instanceof NotInkdHolder) {
-    console.log("Mint an InkdToken first!");
+  if (e instanceof TransactionFailed) {
+    console.error("TX reverted:", e.message, e.txHash);
+  } else if (e instanceof UploadError) {
+    console.error("Arweave upload failed:", e.message);
   }
+}
+```
+
+**`TransactionFailed` extras:**
+
+```typescript
+class TransactionFailed extends InkdError {
+  txHash?: string; // transaction hash if available
+}
+```
+
+**`InsufficientFunds` extras:**
+
+```typescript
+class InsufficientFunds extends InkdError {
+  required: bigint;
+  available: bigint;
 }
 ```
 
@@ -435,107 +661,108 @@ try {
 
 ## Types
 
-### InkdTokenData
+### `Address`
 
 ```typescript
-interface InkdTokenData {
-  tokenId: bigint;
-  owner: `0x${string}`;
-  mintedAt: bigint;
-  inscriptionCount: bigint;
-  uri: string;
-}
+type Address = `0x${string}`;
 ```
 
-### Inscription
+### `ContentType`
 
-```typescript
-interface Inscription {
-  arweaveHash: string;
-  contentType: string;
-  size: bigint;
-  name: string;
-  createdAt: bigint;
-  isRemoved: boolean;
-  version: bigint;
-}
-```
-
-### AccessGrant
-
-```typescript
-interface AccessGrant {
-  grantee: `0x${string}`;
-  expiresAt: bigint;
-  grantedAt: bigint;
-}
-```
-
-### Memory
-
-```typescript
-interface Memory {
-  tokenId: bigint | null;
-  inscriptionIndex: number | null;
-  key: string;
-  data: unknown;
-  tags: string[];
-  category: MemoryCategory;
-  importance: number;
-  createdAt: string;
-  updatedAt: string;
-  arweaveHash: string | null;
-  accessCount: number;
-  version: number;
-}
-```
-
-### MemoryCategory
-
-```typescript
-type MemoryCategory =
-  | "experience" | "skill" | "knowledge" | "preference"
-  | "conversation" | "code" | "config" | "relationship"
-  | "strategy" | "reflection";
-```
-
-### InkdClientConfig
-
-```typescript
-interface InkdClientConfig {
-  tokenAddress: `0x${string}`;
-  vaultAddress: `0x${string}`;
-  registryAddress: `0x${string}`;
-  chainId: 8453 | 84532;
-}
-```
-
-### ProtocolStats
-
-```typescript
-interface ProtocolStats {
-  totalTokens: bigint;
-  totalInscriptions: bigint;
-  totalVolume: bigint;
-  totalSales: bigint;
-}
-```
-
-### ContentType Enum
+Common MIME types as an enum for convenience:
 
 ```typescript
 enum ContentType {
-  JSON = "application/json",
-  TEXT = "text/plain",
-  MARKDOWN = "text/markdown",
-  HTML = "text/html",
-  JAVASCRIPT = "application/javascript",
-  TYPESCRIPT = "application/typescript",
-  PYTHON = "text/x-python",
-  BINARY = "application/octet-stream",
-  IMAGE_PNG = "image/png",
-  IMAGE_SVG = "image/svg+xml",
-  PDF = "application/pdf",
-  WASM = "application/wasm",
+  JSON        = "application/json",
+  PlainText   = "text/plain",
+  Markdown    = "text/markdown",
+  HTML        = "text/html",
+  CSS         = "text/css",
+  JavaScript  = "application/javascript",
+  TypeScript  = "application/typescript",
+  PNG         = "image/png",
+  JPEG        = "image/jpeg",
+  SVG         = "image/svg+xml",
+  GIF         = "image/gif",
+  WebP        = "image/webp",
+  PDF         = "application/pdf",
+  Binary      = "application/octet-stream",
+  YAML        = "application/yaml",
+  XML         = "application/xml",
+  CSV         = "text/csv",
+  WASM        = "application/wasm",
 }
 ```
+
+### `UploadResult`
+
+```typescript
+interface UploadResult {
+  hash: string;  // Arweave transaction ID
+  url: string;   // Full gateway URL
+  size: number;  // Bytes uploaded
+}
+```
+
+### `EncryptedData`
+
+```typescript
+interface EncryptedData {
+  ciphertext: Uint8Array;
+  encryptedSymmetricKey: string;
+  accessControlConditions: unknown[];
+}
+```
+
+---
+
+## Full Example
+
+Register a project, upload a version artifact to Arweave, and push the version on-chain:
+
+```typescript
+import { InkdClient, ArweaveClient, ADDRESSES } from "@inkd/sdk";
+import { createWalletClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
+import * as fs from "fs";
+
+const account = privateKeyToAccount("0xYOUR_PRIVATE_KEY");
+const walletClient = createWalletClient({ account, chain: baseSepolia, transport: http() });
+
+// 1. Create client
+const inkd = new InkdClient({ walletClient, network: "testnet" });
+
+// 2. Approve $INKD spend (only needed once per project)
+await inkd.approveToken();
+
+// 3. Register project
+const createHash = await inkd.createProject({
+  name: "my-agent",
+  description: "Autonomous on-chain agent",
+  isAgent: true,
+  agentEndpoint: "https://api.my-agent.xyz",
+});
+// Wait for receipt and extract projectId from logs...
+const projectId = 1n; // from event log
+
+// 4. Upload artifact to Arweave
+const arweave = new ArweaveClient("https://node2.irys.xyz", "0xYOUR_PRIVATE_KEY");
+await arweave.connect();
+
+const artifact = fs.readFileSync("./dist/agent.tar.gz");
+const upload = await arweave.uploadFile(artifact, "application/gzip");
+
+// 5. Push version on-chain
+await inkd.pushVersion(projectId, {
+  arweaveHash: upload.hash,
+  versionTag: "v0.9.0",
+  changelog: "Initial release",
+});
+
+console.log("Version live at:", arweave.getUrl(upload.hash));
+```
+
+---
+
+*See also: [QUICKSTART.md](./QUICKSTART.md) (CLI path) · [getting-started.md](./getting-started.md) (SDK path) · [SDK_REFERENCE.md](./SDK_REFERENCE.md) (advanced modules) · [CLI_REFERENCE.md](./CLI_REFERENCE.md)*
