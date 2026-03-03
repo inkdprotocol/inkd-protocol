@@ -24,18 +24,24 @@ Core protocol, tooling, and infrastructure — fully shipped.
 | Item | Status |
 |------|--------|
 | Smart contracts (InkdToken, InkdRegistry, InkdTreasury) | ✅ |
-| TypeScript SDK (`@inkd/sdk`) — full client, AgentMemory, Arweave, encryption | ✅ |
-| **153-test SDK suite** (vitest) — unit, integration, advanced, error, encryption, ProjectRegistry | ✅ |
-| **159-test contract suite** (Foundry) — unit, fuzz, invariant, UUPS upgrade | ✅ |
+| **InkdTimelock.sol** — 48h admin timelock for governance transitions | ✅ |
+| **InkdTestToken.sol** — ERC-20 + ERC-2612 permit token for testing | ✅ |
+| TypeScript SDK (`@inkd/sdk`) — InkdClient, ArweaveClient, encryption | ✅ |
+| **323-test SDK suite** (vitest) — unit, integration, advanced, error, encryption, ProjectRegistry, multicall, events — **100% stmts/branches/funcs/lines** | ✅ |
+| **238-test contract suite** (Foundry) — unit, fuzz, invariant, UUPS upgrade, timelock, test token | ✅ |
 | Fuzz tests (13) + Invariant tests (6) | ✅ |
-| Security review (internal) — re-entrancy, access control, upgrade safety | ✅ |
+| **348-test CLI suite** (vitest) — all commands covered, 99%+ stmts | ✅ |
+| Security review (internal) — re-entrancy, access control, upgrade safety, timelock | ✅ |
+| **AUDIT_PREP.md** — 342-line auditor guide (scope, trust model, focus areas, known decisions) | ✅ |
+| **SECURITY_REVIEW.md** — updated with InkdTimelock analysis (LOW-3, INFO-6) | ✅ |
 | The Graph subgraph definition (Base mainnet + Sepolia) | ✅ |
+| **SUBGRAPH.md** — 531-line The Graph integration guide with full GraphQL schema + AssemblyScript stubs | ✅ |
 | Full documentation — contract, SDK, architecture, tokenomics, whitepaper | ✅ |
 | **Technical Whitepaper PDF** (`docs/whitepaper.pdf`, A4, 430KB) | ✅ |
-| CI/CD pipeline (GitHub Actions) | ✅ |
+| CI/CD pipeline (GitHub Actions) — split test-sdk + test-cli jobs | ✅ |
 | Deploy scripts + post-deploy playbook | ✅ |
+| **Deploy.s.sol** deploys all 6 contracts including InkdTimelock | ✅ |
 | **CLI tool** (`inkd`) — create, push, list, search, watch, token, agent, agentd | ✅ |
-| **CLI test suite** (vitest) — 40+ CLI-specific tests | ✅ |
 | Twitter/X content strategy (26 posts queued) | ✅ |
 | AI agent examples (autonomous, OpenAI, LangChain, multi-agent) | ✅ |
 | Makefile — `make test`, `make ci`, `make deploy-dry`, 15+ targets | ✅ |
@@ -49,7 +55,7 @@ Deploy to mainnet. Establish presence.
 
 | Item | Status | Notes |
 |------|--------|-------|
-| External smart contract audit | 📅 | Pre-requisite for mainnet |
+| External smart contract audit | 📅 | Pre-requisite for mainnet; AUDIT_PREP.md ready |
 | Base mainnet deployment | 📅 | Needs ~$15 ETH on deployer + `BASESCAN_API_KEY` |
 | Contract addresses published | 📅 | Post-deploy |
 | Subgraph deployed to The Graph Studio | 📅 | After contracts live |
@@ -63,14 +69,15 @@ Deploy to mainnet. Establish presence.
 
 ---
 
-## Phase 2 — Ecosystem 📅 *Q2 2026*
+## Phase 2 — Ecosystem 🔄 *Q2 2026*
 
 Grow usage. Build community. Improve UX.
 
 | Item | Status | Notes |
 |------|--------|-------|
-| **SDK v0.2** — event subscriptions, watch mode | 📅 | viem `watchEvent` wrappers |
-| **SDK v0.2** — batch reads (multi-project fetch) | 📅 | Multicall3 integration |
+| **SDK v0.2** — event subscriptions, watch mode | ✅ | viem `watchEvent` wrappers — `watchProjectCreated`, `watchVersionPushed`, `watchRegistryEvents` |
+| **SDK v0.2** — batch reads (multi-project fetch) | ✅ | Multicall3 — `batchGetProjects`, `batchGetVersions`, `batchGetFees`, `batchGetProjectsWithVersions` |
+| **LitEncryptionProvider** — Lit Protocol stub (v2 slot) | ✅ | Interface ready; full Lit integration pending |
 | **Arweave bundler integration** — push content + register in one call | 📅 | |
 | **Project explorer** (web UI) — browse all registered projects | 📅 | On website |
 | **Analytics dashboard** — protocol stats, volume, top projects | 📅 | Powered by subgraph |
@@ -128,4 +135,4 @@ Want to contribute? See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
-*Last updated: 2026-03-03 | Phase 0 complete, Phase 1 in motion — 312 tests passing, all green*
+*Last updated: 2026-03-04 | Phase 0 + Phase 2 SDK v0.2 complete — 909 tests passing (238 contracts / 323 SDK / 348 CLI), all green*
