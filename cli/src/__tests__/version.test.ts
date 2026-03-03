@@ -446,3 +446,30 @@ describe("cmdVersionList — long changelog truncation", () => {
     expect(logged).not.toMatch(/B{72}…/);
   });
 });
+
+// ─── cmdVersionList — empty changelog branch (branch coverage) ────────────────
+
+describe("cmdVersionList — empty changelog (branch coverage)", () => {
+  beforeEach(() => {
+    setupProcessMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("does not print changelog line when changelog is empty in list view", async () => {
+    mockReadContract = vi
+      .fn()
+      .mockResolvedValueOnce(1n) // getVersionCount
+      .mockResolvedValueOnce(makeVersion({ changelog: "" }));
+
+    const consoleLog = vi.spyOn(console, "log");
+    const { cmdVersionList } = await import("../commands/version.js");
+    await cmdVersionList(["1"]);
+
+    const logged = consoleLog.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
+    // changelog line (indented with spaces) should NOT appear
+    expect(logged).not.toMatch(/^\s{7}/m);
+  });
+});
