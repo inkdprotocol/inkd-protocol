@@ -68,6 +68,7 @@ export const ADDRESSES = {
     token:    '' as Address,
     registry: '' as Address,
     treasury: '' as Address,
+    rpcUrl:   'https://mainnet.base.org',
   },
   testnet: {
     // $TEST — beta launch on Base mainnet (2026-03-03)

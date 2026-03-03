@@ -18,11 +18,13 @@ export declare const ADDRESSES: {
         readonly token: Address;
         readonly registry: Address;
         readonly treasury: Address;
+        readonly rpcUrl: "https://mainnet.base.org";
     };
     readonly testnet: {
         readonly token: Address;
         readonly registry: Address;
         readonly treasury: Address;
+        readonly rpcUrl: "https://mainnet.base.org";
     };
 };
 export type Network = keyof typeof ADDRESSES;

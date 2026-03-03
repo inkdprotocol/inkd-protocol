@@ -194,7 +194,8 @@ function cmdDaemonPeers() {
 }
 // ─── Sub-command: start ───────────────────────────────────────────────────────
 async function cmdAgentd(args) {
-    const sub = args[0] ?? 'start';
+    const isFlag = (s) => s.startsWith('--');
+    const sub = (args[0] && !isFlag(args[0])) ? args[0] : 'start';
     if (sub === 'status') {
         cmdDaemonStatus();
         return;
@@ -207,7 +208,7 @@ async function cmdAgentd(args) {
         (0, config_js_1.error)(`Unknown agentd command: ${sub}\nUsage: inkd agentd [start|status|peers]`);
     }
     // ─── Parse flags ────────────────────────────────────────────────────────────
-    const remaining = args.slice(1);
+    const remaining = (args[0] && !isFlag(args[0])) ? args.slice(1) : args;
     const getFlag = (f) => {
         const i = remaining.indexOf(f);
         return i !== -1 && remaining[i + 1] ? remaining[i + 1] : undefined;
