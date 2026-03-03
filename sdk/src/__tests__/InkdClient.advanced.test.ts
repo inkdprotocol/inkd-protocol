@@ -544,6 +544,27 @@ describe("InkdClient — mintToken() batch", () => {
     const call = wal.writeContract.mock.calls[0][0];
     expect(call.functionName).toBe("mint"); // not batchMint
   });
+
+  it("extractAllTokenIdsFromLogs: skips log with invalid topic[3] (catch branch)", async () => {
+    // First log has an unparseable topic[3] — BigInt("not-a-bigint") throws → catch fires
+    // Second log is valid — should be included in result
+    const client = new InkdClient(TEST_CONFIG);
+    const MINT_PRICE = 1_000_000_000_000_000n;
+
+    connectClient(client, {
+      readContract: vi.fn().mockResolvedValue(MINT_PRICE),
+      waitForTransactionReceipt: vi.fn().mockResolvedValue({
+        logs: [
+          { topics: ["0xTransfer", "0x0", "0xuser", "not-a-bigint"] }, // ← triggers catch
+          { topics: ["0xTransfer", "0x0", "0xuser", "0x5"] },           // ← valid: 5n
+        ],
+      }),
+    });
+
+    const result = await client.mintToken({ quantity: 2 });
+    // Only the valid log contributes; tokenId = first valid tokenId = 5n
+    expect(result.tokenId).toBe(5n);
+  });
 });
 
 // ─── inscribe() full flow ─────────────────────────────────────────────────────
@@ -644,6 +665,24 @@ describe("InkdClient — inscribe() full flow", () => {
 
     const result = await client.inscribe(1n, "data");
     expect(result.inscriptionIndex).toBe(0n);
+  });
+
+  it("extractInscriptionIndexFromLogs: skips log with invalid topic[2] (catch branch), falls back to next valid log", async () => {
+    // First log has an unparseable topic[2] — BigInt throws → catch fires → continue
+    // Second log has valid topic[2] = 0x9 → inscriptionIndex = 9n
+    const client = new InkdClient(TEST_CONFIG);
+    connectClient(client, {
+      waitForTransactionReceipt: vi.fn().mockResolvedValue({
+        logs: [
+          { topics: ["0xInscribed", "0x1", "not-a-bigint"] }, // ← triggers catch
+          { topics: ["0xInscribed", "0x1", "0x9"] },           // ← valid: 9n
+        ],
+      }),
+    });
+    injectMockArweave(client);
+
+    const result = await client.inscribe(1n, "data");
+    expect(result.inscriptionIndex).toBe(9n);
   });
 });
 
