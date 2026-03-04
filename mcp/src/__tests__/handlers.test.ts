@@ -347,4 +347,120 @@ describe('handleListAgents', () => {
     await handleListAgents({}, ctx)
     expect(fetchMock.mock.calls[0][0]).toContain('https://api.test/v1/agents')
   })
+
+  it('handles empty agents list gracefully', async () => {
+    const ctx = makeCtx({
+      readFetch: vi.fn().mockResolvedValue(mockRes({ data: [], total: '0' })),
+    })
+    const result = await handleListAgents({}, ctx)
+    expect(result.isError).toBeFalsy()
+    expect(result.content[0].text).toContain('total: 0')
+    // Only the header line, no agent entries
+    const lines = result.content[0].text.split('\n').filter(Boolean)
+    expect(lines).toHaveLength(1)
+  })
+})
+
+// ─── Edge cases: untested branches ───────────────────────────────────────────
+
+describe('handleCreateProject — json parse failure on error response', () => {
+  it('falls back to {} when error body is not valid JSON', async () => {
+    const ctx = makeCtx({
+      fetch: vi.fn().mockResolvedValue({
+        ok:         false,
+        status:     500,
+        statusText: 'Internal Server Error',
+        // json() rejects — simulates non-JSON error body (e.g. HTML 502 page)
+        json: () => Promise.reject(new SyntaxError('Unexpected token')),
+      } as unknown as Response),
+    })
+    const result = await handleCreateProject({ name: 'x' }, ctx)
+    expect(result.isError).toBe(true)
+    // Fallback {} serialises to "{}"
+    expect(result.content[0].text).toContain('Error:')
+    expect(result.content[0].text).toContain('{}')
+  })
+})
+
+describe('handlePushVersion — json parse failure on error response', () => {
+  it('falls back to {} when error body is not valid JSON', async () => {
+    const ctx = makeCtx({
+      fetch: vi.fn().mockResolvedValue({
+        ok:         false,
+        status:     503,
+        statusText: 'Service Unavailable',
+        json: () => Promise.reject(new SyntaxError('Unexpected token')),
+      } as unknown as Response),
+    })
+    const result = await handlePushVersion({ projectId: '1', tag: 'v1', contentHash: 'ar://x' }, ctx)
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('{}')
+  })
+})
+
+describe('handleGetProject — description fallback', () => {
+  it('shows (none) when description is empty string', async () => {
+    const ctx = makeCtx({
+      readFetch: vi.fn().mockResolvedValue(mockRes({
+        data: {
+          id:           '10',
+          name:         'no-desc-proj',
+          owner:        '0xX',
+          description:  '',   // ← empty
+          license:      'MIT',
+          versionCount: '0',
+          isPublic:     true,
+          isAgent:      false,
+          agentEndpoint: '',
+        },
+      })),
+    })
+    const result = await handleGetProject({ projectId: '10' }, ctx)
+    expect(result.content[0].text).toContain('(none)')
+  })
+
+  it('shows (none) when description is undefined', async () => {
+    const ctx = makeCtx({
+      readFetch: vi.fn().mockResolvedValue(mockRes({
+        data: {
+          id:           '11',
+          name:         'undef-desc',
+          owner:        '0xY',
+          // description omitted
+          license:      'Apache-2.0',
+          versionCount: '1',
+          isPublic:     false,
+          isAgent:      false,
+          agentEndpoint: '',
+        },
+      })),
+    })
+    const result = await handleGetProject({ projectId: '11' }, ctx)
+    expect(result.content[0].text).toContain('(none)')
+  })
+})
+
+describe('handleGetVersions — empty list and date formatting', () => {
+  it('handles empty versions list gracefully', async () => {
+    const ctx = makeCtx({
+      readFetch: vi.fn().mockResolvedValue(mockRes({ data: [], total: '0' })),
+    })
+    const result = await handleGetVersions({ projectId: '99' }, ctx)
+    expect(result.isError).toBeFalsy()
+    expect(result.content[0].text).toContain('total: 0')
+    const lines = result.content[0].text.split('\n').filter(Boolean)
+    expect(lines).toHaveLength(1)
+  })
+
+  it('formats pushedAt unix timestamp as ISO date YYYY-MM-DD', async () => {
+    // 2024-01-15T00:00:00Z === 1705276800
+    const ctx = makeCtx({
+      readFetch: vi.fn().mockResolvedValue(mockRes({
+        data:  [{ tag: 'v2.0.0', contentHash: 'ar://QmZ', pushedAt: '1705276800' }],
+        total: '1',
+      })),
+    })
+    const result = await handleGetVersions({ projectId: '1' }, ctx)
+    expect(result.content[0].text).toContain('2024-01-15')
+  })
 })
