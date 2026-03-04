@@ -98,7 +98,7 @@ contract InkdBuyback is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     /// @param owner_       Multisig address (Safe 2-of-2)
     /// @param inkdToken_   $INKD token CA — pass address(0) before Clanker launch
-    /// @param threshold_   ETH threshold in wei (default: 0.03 ETH)
+    /// @param threshold_   ETH threshold in wei (default: 0.015 ETH ≈ $50)
     function initialize(
         address owner_,
         address inkdToken_,
@@ -106,8 +106,8 @@ contract InkdBuyback is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     ) external initializer {
         if (owner_ == address(0)) revert ZeroAddress();
         __Ownable_init(owner_);
-        inkdToken     = inkdToken_;
-        threshold     = threshold_ > 0 ? threshold_ : 0.03 ether;
+        inkdToken      = inkdToken_;
+        threshold      = threshold_ > 0 ? threshold_ : 0.015 ether;
         maxSlippageBps = 200; // 2%
     }
 
@@ -115,20 +115,30 @@ contract InkdBuyback is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     receive() external payable {
         emit EthReceived(msg.sender, msg.value);
+        // Auto-trigger buyback if threshold is met
+        if (inkdToken != address(0) && address(this).balance >= threshold) {
+            _executeBuyback();
+        }
     }
 
     // ───── Core: Buyback ─────────────────────────────────────────────────────
 
     /**
-     * @notice Execute $INKD buyback if ETH balance >= threshold.
-     * @dev Public — anyone can call this. Caller pays gas.
-     *      Consider calling this via a keeper or MEV bot for automation.
+     * @notice Manually trigger buyback — in case auto-trigger missed it.
+     * @dev Normally triggered automatically via receive(). Public fallback.
      */
     function executeBuyback() external {
         if (inkdToken == address(0)) revert InkdTokenNotSet();
-
         uint256 balance = address(this).balance;
         if (balance < threshold) revert BelowThreshold(balance, threshold);
+        _executeBuyback();
+    }
+
+    /// @dev Internal buyback logic — shared by receive() and executeBuyback()
+    function _executeBuyback() internal {
+        uint256 balance = address(this).balance;
+        if (inkdToken == address(0)) return;
+        if (balance < threshold) return;
 
         // Wrap ETH → WETH
         IWETH(WETH).deposit{value: balance}();
@@ -162,6 +172,7 @@ contract InkdBuyback is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         emit BuybackExecuted(msg.sender, balance, inkdOut);
     }
+
 
     // ───── View ──────────────────────────────────────────────────────────────
 
