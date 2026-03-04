@@ -45,17 +45,12 @@ A token/registry protocol on Base (EVM). Key artifacts:
 - ✅ **Full X402 USDC Stack** — $5 create / $2 version push, payTo=Treasury, settler splits revenue
 - ✅ **Treasury refactor** — settle() callable by API server (settler) or Registry, graceful buybackContract notify
 
-**OPEN / BLOCKING as of 2026-03-04:**
-- ❌ **$INKD Token via Clanker** — deploy on Base Mainnet, send me CA → I set it in Buyback + update SDK
-- ❌ **3x Safe Multisig (2-of-2 each):**
-  - Safe 1: Dev/Deployer Wallet — 2 keys
-  - Safe 2: Buyback Wallet — 2 keys
-  - Safe 3: Treasury Wallet — 2 keys
-  - = 6 Wallets total, alle von Hazar kontrolliert
-  - Hazar erstellt auf app.safe.global → sendet mir die 3 Safe-Adressen
-- ❌ **Buyback Wallet Adresse** — needs to be set in Treasury after deploy
-- ✅ **LP Lock** — automatisch via Clanker
-- ⚠️ **Security Audit** — recommended before full public launch
+**Launch Reihenfolge (confirmed 2026-03-04):**
+1. ❌ **3x Safe Multisig** erstellen (app.safe.global, Base Mainnet, 2-of-2 each): Dev, Buyback, Treasury → Adressen schicken
+2. ❌ **$TEST via Clanker** deployen → kompletter Durchtest (Buyback, Treasury, X402, AgentKit, alles)
+3. ❌ **$INKD via Clanker** → erst wenn $TEST sauber läuft
+4. ❌ **Protocol Contracts** auf Mainnet deployen mit Safe-Adressen als Owner
+- ⚠️ **Security Audit** — recommended before full public launch ($INKD)
 
 **Architecture (final):**
 - Agent pays $5 USDC via X402 → Treasury.settle() splits: $1 Arweave / $2 Buyback / $2 Treasury
@@ -112,6 +107,8 @@ Hazar hat das am 2026-03-04 klar gemacht. Nicht nochmal vergessen.
 
 - **Don't say "done" prematurely.** On 2026-03-03, I told Hazar we were "fertig" when multisig, LP lock, and security audit were still open. That was a failure. Always give a complete status, including what's still blocking.
 - **Hazar expects full honesty on blockers**, not optimistic summaries.
+- **ALWAYS read MEMORY.md from disk at session start** — the injected system prompt version can be stale/outdated. Use `read` tool to load actual file, not the cached inject.
+- **LP Lock / Timelock are NOT tasks** — $INKD launches via Clanker. LP is auto-locked by Clanker. Never mention manual LP lock again. Hazar has had to correct this 10+ times.
 
 ---
 
