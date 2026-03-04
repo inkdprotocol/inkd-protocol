@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "rootDirectory": "api",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "functions": {
+    "dist/index.js": {
+      "runtime": "nodejs22.x",
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/dist/index.js" }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
