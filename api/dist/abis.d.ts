@@ -274,4 +274,59 @@ export declare const TOKEN_ABI: readonly [{
         readonly type: "bool";
     }];
 }];
+export declare const TREASURY_ABI: readonly [{
+    readonly name: "settle";
+    readonly type: "function";
+    readonly stateMutability: "nonpayable";
+    readonly inputs: readonly [{
+        readonly name: "total";
+        readonly type: "uint256";
+    }, {
+        readonly name: "arweaveCost";
+        readonly type: "uint256";
+    }];
+    readonly outputs: readonly [];
+}, {
+    readonly name: "calculateTotal";
+    readonly type: "function";
+    readonly stateMutability: "view";
+    readonly inputs: readonly [{
+        readonly name: "arweaveCost";
+        readonly type: "uint256";
+    }];
+    readonly outputs: readonly [{
+        readonly type: "uint256";
+    }];
+}, {
+    readonly name: "markupBps";
+    readonly type: "function";
+    readonly stateMutability: "view";
+    readonly inputs: readonly [];
+    readonly outputs: readonly [{
+        readonly type: "uint256";
+    }];
+}, {
+    readonly name: "feeSplit";
+    readonly type: "function";
+    readonly stateMutability: "view";
+    readonly inputs: readonly [];
+    readonly outputs: readonly [{
+        readonly name: "toArweave";
+        readonly type: "uint256";
+    }, {
+        readonly name: "toBuyback";
+        readonly type: "uint256";
+    }, {
+        readonly name: "toTreasury";
+        readonly type: "uint256";
+    }];
+}, {
+    readonly name: "serviceFee";
+    readonly type: "function";
+    readonly stateMutability: "view";
+    readonly inputs: readonly [];
+    readonly outputs: readonly [{
+        readonly type: "uint256";
+    }];
+}];
 //# sourceMappingURL=abis.d.ts.map

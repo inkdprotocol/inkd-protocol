@@ -30,6 +30,7 @@ import { ExactEvmScheme }                         from '@x402/evm/exact/server'
 import type { RoutesConfig }                      from '@x402/core/server'
 import type { RequestHandler, Request }           from 'express'
 import type { Address }                           from 'viem'
+import { generateJwt }                            from '@coinbase/cdp-sdk/auth'
 
 // CAIP-2 network identifiers
 export const NETWORK_BASE_MAINNET = 'eip155:8453'
@@ -46,6 +47,10 @@ export interface X402Config {
   facilitatorUrl:  string
   /** Network to accept payments on */
   network:         'mainnet' | 'testnet'
+  /** CDP API Key ID — required for Mainnet CDP facilitator */
+  cdpApiKeyId?:     string | null
+  /** CDP API Key Secret — required for Mainnet CDP facilitator */
+  cdpApiKeySecret?: string | null
 }
 
 /**
@@ -89,7 +94,33 @@ export function buildX402Middleware(cfg: X402Config): RequestHandler {
     },
   }
 
-  const facilitator = new HTTPFacilitatorClient({ url: cfg.facilitatorUrl })
+  // Build CDP JWT auth if credentials provided (required for Mainnet facilitator)
+  // The HTTPFacilitatorClient expects: () => Promise<{ verify, settle, supported }>
+  // where each key is a Record<string, string> of headers for that endpoint.
+  const cdpFacilitatorHost = 'api.cdp.coinbase.com'
+  const createAuthHeaders = (cfg.cdpApiKeyId && cfg.cdpApiKeySecret)
+    ? async () => {
+        const makeJwt = (path: string) => generateJwt({
+          apiKeyId:      cfg.cdpApiKeyId!,
+          apiKeySecret:  cfg.cdpApiKeySecret!,
+          requestMethod: 'POST',
+          requestHost:   cdpFacilitatorHost,
+          requestPath:   `/platform/v2/x402/${path}`,
+        })
+        const [verifyJwt, settleJwt, supportedJwt] = await Promise.all([
+          makeJwt('verify'),
+          makeJwt('settle'),
+          makeJwt('supported'),
+        ])
+        return {
+          verify:    { Authorization: `Bearer ${verifyJwt}` },
+          settle:    { Authorization: `Bearer ${settleJwt}` },
+          supported: { Authorization: `Bearer ${supportedJwt}` },
+        }
+      }
+    : undefined
+
+  const facilitator = new HTTPFacilitatorClient({ url: cfg.facilitatorUrl, createAuthHeaders })
   const server = new x402ResourceServer(facilitator)
     .register(networkId as `${string}:${string}`, new ExactEvmScheme())
   return paymentMiddleware(routes, server)

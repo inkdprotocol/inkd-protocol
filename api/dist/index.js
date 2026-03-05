@@ -62,14 +62,16 @@ app.use('/v1', (0, health_js_1.healthRouter)(cfg));
 // ─── x402 Payment middleware (wallet = identity) ──────────────────────────────
 // Protects POST /v1/projects and POST /v1/projects/:id/versions
 // Falls back to API key auth if x402 is not configured (dev mode)
-if (cfg.x402Enabled && cfg.serverWalletAddress) {
+if (cfg.x402Enabled && cfg.treasuryAddress) {
     const x402 = (0, x402_js_1.buildX402Middleware)({
-        payTo: cfg.serverWalletAddress,
+        treasuryAddress: cfg.treasuryAddress,
         facilitatorUrl: cfg.x402FacilitatorUrl,
         network: cfg.network,
+        cdpApiKeyId: cfg.cdpApiKeyId,
+        cdpApiKeySecret: cfg.cdpApiKeySecret,
     });
     app.use('/v1', x402);
-    console.log(`  [x402] Payment middleware active → payTo: ${cfg.serverWalletAddress}`);
+    console.log(`  [x402] Payment middleware active → Treasury: ${cfg.treasuryAddress}`);
 }
 else {
     // Dev mode — fall back to optional API key auth
@@ -116,9 +118,11 @@ app.use((err, _req, res, _next) => {
         error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
     });
 });
-// ─── Start ────────────────────────────────────────────────────────────────────
-app.listen(cfg.port, () => {
-    console.log(`
+// ─── Start (local only — Vercel uses export default app) ─────────────────────
+// Only listen when running directly (not as Vercel serverless function)
+if (process.env['VERCEL'] !== '1') {
+    app.listen(cfg.port, () => {
+        console.log(`
   ┌─────────────────────────────────────────────────┐
   │           @inkd/api  v0.1.0                     │
   ├─────────────────────────────────────────────────┤
@@ -134,6 +138,7 @@ app.listen(cfg.port, () => {
   GET  http://localhost:${cfg.port}/v1/projects
   GET  http://localhost:${cfg.port}/v1/agents
   `);
-});
+    });
+}
 exports.default = app;
 //# sourceMappingURL=index.js.map

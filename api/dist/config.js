@@ -32,19 +32,23 @@ function loadConfig() {
         : 'https://sepolia.base.org';
     const serverWalletKey = process.env['SERVER_WALLET_KEY'] ?? null;
     const serverWalletAddress = (process.env['SERVER_WALLET_ADDRESS'] ?? null);
+    const treasuryAddress = (process.env['INKD_TREASURY_ADDRESS'] ?? null);
     return {
         port: parseInt(process.env['PORT'] ?? '3000', 10),
         network,
         rpcUrl: process.env['INKD_RPC_URL'] ?? defaultRpc,
-        apiKey: process.env['INKD_API_KEY'] ?? null, // null = no auth (local dev)
+        apiKey: process.env['INKD_API_KEY'] ?? null,
         corsOrigin: process.env['CORS_ORIGIN'] ?? '*',
         rateLimitWindowMs: parseInt(process.env['RATE_LIMIT_WINDOW_MS'] ?? '60000', 10),
         rateLimitMax: parseInt(process.env['RATE_LIMIT_MAX'] ?? '60', 10),
         // x402
         serverWalletKey,
         serverWalletAddress,
+        treasuryAddress,
         x402FacilitatorUrl: process.env['X402_FACILITATOR_URL'] ?? 'https://x402.org/facilitator',
-        x402Enabled: Boolean(serverWalletAddress) && process.env['X402_ENABLED'] !== 'false',
+        x402Enabled: Boolean(treasuryAddress) && process.env['X402_ENABLED'] !== 'false',
+        cdpApiKeyId: process.env['CDP_API_KEY_ID'] ?? null,
+        cdpApiKeySecret: process.env['CDP_API_KEY_SECRET'] ?? null,
     };
 }
 // ─── Chain helper ─────────────────────────────────────────────────────────────
