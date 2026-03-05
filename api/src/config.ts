@@ -46,6 +46,9 @@ export interface ApiConfig {
   treasuryAddress:    Address | null  // InkdTreasury — x402 payTo address
   x402FacilitatorUrl: string
   x402Enabled:        boolean
+  // CDP API credentials (for Mainnet CDP facilitator auth)
+  cdpApiKeyId:     string | null
+  cdpApiKeySecret: string | null
 }
 
 export function loadConfig(): ApiConfig {
@@ -76,6 +79,8 @@ export function loadConfig(): ApiConfig {
     treasuryAddress,
     x402FacilitatorUrl: process.env['X402_FACILITATOR_URL'] ?? 'https://x402.org/facilitator',
     x402Enabled: Boolean(treasuryAddress) && process.env['X402_ENABLED'] !== 'false',
+    cdpApiKeyId:     process.env['CDP_API_KEY_ID']     ?? null,
+    cdpApiKeySecret: process.env['CDP_API_KEY_SECRET'] ?? null,
   }
 }
 

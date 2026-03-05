@@ -21,8 +21,11 @@ export interface ApiConfig {
     rateLimitMax: number;
     serverWalletKey: string | null;
     serverWalletAddress: Address | null;
+    treasuryAddress: Address | null;
     x402FacilitatorUrl: string;
     x402Enabled: boolean;
+    cdpApiKeyId: string | null;
+    cdpApiKeySecret: string | null;
 }
 export declare function loadConfig(): ApiConfig;
 export declare function getChain(network: Network): Chain;

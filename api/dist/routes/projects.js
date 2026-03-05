@@ -16,6 +16,7 @@ const config_js_1 = require("../config.js");
 const clients_js_1 = require("../clients.js");
 const x402_js_1 = require("../middleware/x402.js");
 const abis_js_1 = require("../abis.js");
+const arweave_js_1 = require("../arweave.js");
 const errors_js_1 = require("../errors.js");
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 const CreateProjectBody = zod_1.z.object({
@@ -32,7 +33,7 @@ const PushVersionBody = zod_1.z.object({
     tag: zod_1.z.string().min(1).max(64),
     contentHash: zod_1.z.string().min(1).max(128),
     metadataHash: zod_1.z.string().max(128).default(''),
-    // privateKey removed — server wallet signs, payer address comes from x402 payment
+    contentSize: zod_1.z.number().int().min(0).optional(), // bytes — used for dynamic Arweave pricing
 });
 const PaginationQuery = zod_1.z.object({
     offset: zod_1.z.coerce.number().int().min(0).default(0),
@@ -107,6 +108,34 @@ function projectsRouter(cfg) {
             (0, errors_js_1.sendError)(res, err);
         }
     });
+    // ── GET /v1/projects/estimate?bytes=N ──────────────────────────────────────
+    // NOTE: must be registered BEFORE /:id to avoid Express matching 'estimate' as an id param.
+    // Returns the USDC charge (arweave cost + 20% markup) for a given content size.
+    // Agents call this BEFORE uploading to know how much to approve for X402.
+    router.get('/estimate', async (req, res) => {
+        try {
+            const bytes = parseInt(req.query['bytes'] ?? '0', 10);
+            if (!bytes || bytes <= 0)
+                throw new errors_js_1.BadRequestError('bytes must be a positive integer');
+            if (bytes > 500 * 1024 * 1024)
+                throw new errors_js_1.BadRequestError('Max 500MB per upload');
+            const arweaveCost = await (0, arweave_js_1.getArweaveCostUsdc)(bytes);
+            const { markup, total } = (0, arweave_js_1.calculateCharge)(arweaveCost);
+            res.json({
+                bytes,
+                arweaveCost: arweaveCost.toString(),
+                markup: markup.toString(),
+                total: total.toString(),
+                markupPct: '20%',
+                // Human readable
+                arweaveCostUsd: `$${(Number(arweaveCost) / 1e6).toFixed(4)}`,
+                totalUsd: `$${(Number(total) / 1e6).toFixed(4)}`,
+            });
+        }
+        catch (err) {
+            (0, errors_js_1.sendError)(res, err);
+        }
+    });
     // ── GET /v1/projects/:id ────────────────────────────────────────────────────
     router.get('/:id', async (req, res) => {
         try {
@@ -140,7 +169,17 @@ function projectsRouter(cfg) {
             if (!cfg.serverWalletKey)
                 throw new errors_js_1.ServiceUnavailableError('SERVER_WALLET_KEY not configured. Cannot sign transactions.');
             const payerAddress = (0, x402_js_1.getPayerAddress)(req);
+            const paymentAmount = (0, x402_js_1.getPaymentAmount)(req);
             const { client: walletClient, address: walletAddress } = (0, clients_js_1.buildWalletClient)(cfg, (0, clients_js_1.normalizePrivateKey)(cfg.serverWalletKey));
+            // Settle X402 USDC payment → createProject has no Arweave upload, arweaveCost = 0
+            if (cfg.treasuryAddress && paymentAmount) {
+                await walletClient.writeContract({
+                    address: cfg.treasuryAddress,
+                    abi: abis_js_1.TREASURY_ABI,
+                    functionName: 'settle',
+                    args: [paymentAmount, 0n],
+                });
+            }
             const hash = await walletClient.writeContract({
                 address: registryAddress,
                 abi: abis_js_1.REGISTRY_ABI,
@@ -156,7 +195,7 @@ function projectsRouter(cfg) {
             res.status(201).json({
                 txHash: hash,
                 projectId: total.toString(),
-                owner: payerAddress ?? walletAddress, // payer = owner via x402
+                owner: payerAddress ?? walletAddress,
                 signer: walletAddress,
                 status: receipt.status,
                 blockNumber: receipt.blockNumber.toString(),
@@ -211,11 +250,29 @@ function projectsRouter(cfg) {
             const body = PushVersionBody.safeParse(req.body);
             if (!body.success)
                 throw new errors_js_1.BadRequestError(body.error.issues.map(i => i.message).join('; '));
-            const { tag, contentHash, metadataHash } = body.data;
+            const { tag, contentHash, metadataHash, contentSize } = body.data;
             if (!cfg.serverWalletKey)
                 throw new errors_js_1.ServiceUnavailableError('SERVER_WALLET_KEY not configured. Cannot sign transactions.');
             const payerAddress = (0, x402_js_1.getPayerAddress)(req);
+            const paymentAmount = (0, x402_js_1.getPaymentAmount)(req);
             const { client: walletClient, address: walletAddress } = (0, clients_js_1.buildWalletClient)(cfg, (0, clients_js_1.normalizePrivateKey)(cfg.serverWalletKey));
+            // Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
+            if (cfg.treasuryAddress && paymentAmount) {
+                // Calculate arweave cost portion from content size (best-effort)
+                let arweaveCost = 0n;
+                if (contentSize && contentSize > 0) {
+                    try {
+                        arweaveCost = await (0, arweave_js_1.getArweaveCostUsdc)(contentSize);
+                    }
+                    catch { /* use 0 if price fetch fails */ }
+                }
+                await walletClient.writeContract({
+                    address: cfg.treasuryAddress,
+                    abi: abis_js_1.TREASURY_ABI,
+                    functionName: 'settle',
+                    args: [paymentAmount, arweaveCost],
+                });
+            }
             const hash = await walletClient.writeContract({
                 address: registryAddress,
                 abi: abis_js_1.REGISTRY_ABI,

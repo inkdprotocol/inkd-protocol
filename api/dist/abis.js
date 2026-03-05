@@ -4,7 +4,7 @@
  * Only the functions/events needed to serve API requests.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOKEN_ABI = exports.REGISTRY_ABI = void 0;
+exports.TREASURY_ABI = exports.TOKEN_ABI = exports.REGISTRY_ABI = void 0;
 exports.REGISTRY_ABI = [
     // ── Read ──────────────────────────────────────────────────────────────────
     {
@@ -172,6 +172,50 @@ exports.TOKEN_ABI = [
             { name: 'amount', type: 'uint256' },
         ],
         outputs: [{ type: 'bool' }],
+    },
+];
+exports.TREASURY_ABI = [
+    {
+        name: 'settle',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'total', type: 'uint256' },
+            { name: 'arweaveCost', type: 'uint256' },
+        ],
+        outputs: [],
+    },
+    {
+        name: 'calculateTotal',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'arweaveCost', type: 'uint256' }],
+        outputs: [{ type: 'uint256' }],
+    },
+    {
+        name: 'markupBps',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [{ type: 'uint256' }],
+    },
+    {
+        name: 'feeSplit',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [
+            { name: 'toArweave', type: 'uint256' },
+            { name: 'toBuyback', type: 'uint256' },
+            { name: 'toTreasury', type: 'uint256' },
+        ],
+    },
+    {
+        name: 'serviceFee',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [{ type: 'uint256' }],
     },
 ];
 //# sourceMappingURL=abis.js.map
