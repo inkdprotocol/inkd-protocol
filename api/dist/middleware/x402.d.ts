@@ -28,6 +28,8 @@ export declare const NETWORK_BASE_MAINNET = "eip155:8453";
 export declare const NETWORK_BASE_SEPOLIA = "eip155:84532";
 export declare const USDC_BASE_MAINNET: Address;
 export declare const USDC_BASE_SEPOLIA: Address;
+export declare const PRICE_CREATE_PROJECT = 5000000n;
+export declare const PRICE_PUSH_VERSION = 2000000n;
 export interface X402Config {
     /** InkdTreasury contract address — receives all USDC payments */
     treasuryAddress: Address;
@@ -35,26 +37,27 @@ export interface X402Config {
     facilitatorUrl: string;
     /** Network to accept payments on */
     network: 'mainnet' | 'testnet';
-    /** CDP API Key ID — required for Mainnet CDP facilitator */
-    cdpApiKeyId?: string | null;
-    /** CDP API Key Secret — required for Mainnet CDP facilitator */
-    cdpApiKeySecret?: string | null;
 }
 /**
  * Build x402 USDC payment middleware for Inkd write endpoints.
  *
- * Agents pay with their wallet — USDC goes directly to InkdTreasury.
- * After payment verification, server calls Treasury.settle() to split revenue.
+ * NOTE: Routes are relative to /v1 mount point — no /v1 prefix here.
+ * NOTE: syncFacilitatorOnStart=false — avoids blocking cold starts on Vercel.
  */
 export declare function buildX402Middleware(cfg: X402Config): RequestHandler;
 /**
  * Extract the payer's wallet address from x402 payment headers.
  * This address becomes the on-chain owner of the project/version.
+ *
+ * EIP-3009 exact scheme: payload.authorization.from
  */
 export declare function getPayerAddress(req: Request): Address | undefined;
 /**
  * Extract the amount paid (in USDC base units, 6 decimals).
- * Returns 5_000_000 for $5.00, 2_000_000 for $2.00, etc.
+ *
+ * Falls back to route-hardcoded amounts if header is absent:
+ *   POST /projects          → 5_000_000 ($5.00)
+ *   POST /projects/.../versions → 2_000_000 ($2.00)
  */
 export declare function getPaymentAmount(req: Request): bigint | undefined;
 //# sourceMappingURL=x402.d.ts.map
