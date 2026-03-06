@@ -66,3 +66,5 @@ pumpfun-analytics/
 inkd-protocol/
 file_*/
 *.log
+contracts/.env.mainnet
+contracts/.env.local
