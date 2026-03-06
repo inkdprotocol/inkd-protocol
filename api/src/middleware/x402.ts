@@ -104,7 +104,7 @@ export function buildX402Middleware(cfg: X402Config): RequestHandler {
 
   const routes: RoutesConfig = {
     // Register a project — $5 USDC
-    'POST /v1/projects': {
+    'POST /projects': {
       accepts: {
         scheme:  'exact',
         payTo:   cfg.treasuryAddress,
@@ -118,7 +118,7 @@ export function buildX402Middleware(cfg: X402Config): RequestHandler {
       description: 'Register an AI agent or project on Inkd Protocol (locks $INKD on-chain)',
     },
     // Push a new version — $2 USDC
-    'POST /v1/projects/:id/versions': {
+    'POST /projects/:id/versions': {
       accepts: {
         scheme:  'exact',
         payTo:   cfg.treasuryAddress,

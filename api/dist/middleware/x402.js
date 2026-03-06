@@ -76,7 +76,7 @@ function buildX402Middleware(cfg) {
     const usdcAddr = cfg.network === 'mainnet' ? exports.USDC_BASE_MAINNET : exports.USDC_BASE_SEPOLIA;
     const routes = {
         // Register a project — $5 USDC
-        'POST /v1/projects': {
+        'POST /projects': {
             accepts: {
                 scheme: 'exact',
                 payTo: cfg.treasuryAddress,
@@ -90,7 +90,7 @@ function buildX402Middleware(cfg) {
             description: 'Register an AI agent or project on Inkd Protocol (locks $INKD on-chain)',
         },
         // Push a new version — $2 USDC
-        'POST /v1/projects/:id/versions': {
+        'POST /projects/:id/versions': {
             accepts: {
                 scheme: 'exact',
                 payTo: cfg.treasuryAddress,
