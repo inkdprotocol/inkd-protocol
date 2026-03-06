@@ -46,10 +46,10 @@ contract InkdRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     // ───── Mappings ─────
     mapping(uint256 => Project) public projects;
-    mapping(uint256 => Version[]) private _versions;
-    mapping(uint256 => address[]) private _collaborators;
+    mapping(uint256 => Version[]) internal _versions;
+    mapping(uint256 => address[]) internal _collaborators;
     mapping(string => bool) public nameTaken;
-    mapping(address => uint256[]) private _ownerProjects;
+    mapping(address => uint256[]) internal _ownerProjects;
     mapping(uint256 => mapping(address => bool)) public isCollaborator;
 
     // ───── Events ─────
