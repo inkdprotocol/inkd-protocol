@@ -20,15 +20,13 @@
  *   help                        Show this help message
  */
 
-import { BOLD, RESET, CYAN, DIM, GREEN, YELLOW } from './config.js'
+import { BOLD, RESET, CYAN, DIM, GREEN, YELLOW, error } from './config.js'
 import { cmdInit }                                    from './commands/init.js'
 import { cmdStatus }                                  from './commands/status.js'
 import {
   cmdProjectCreate,
   cmdProjectGet,
   cmdProjectList,
-  cmdProjectTransfer,
-  cmdProjectCollab,
 } from './commands/project.js'
 import {
   cmdVersionPush,
@@ -198,8 +196,8 @@ export async function main(): Promise<void> {
         case 'create':   await cmdProjectCreate(subArgs);           break
         case 'get':      await cmdProjectGet(rest.slice(1));        break
         case 'list':     await cmdProjectList(rest.slice(1));       break
-        case 'transfer': await cmdProjectTransfer(subArgs);         break
-        case 'collab':   await cmdProjectCollab(rest.slice(1));     break
+        case 'transfer': error('project transfer has moved — use app.safe.global to transfer via multisig.'); break
+        case 'collab':   error('project collab has moved — use app.safe.global for collaborator management.'); break
         default:
           console.error(`\n  ${YELLOW}Unknown project sub-command: ${sub}${RESET}`)
           console.error(`  Run ${DIM}inkd help${RESET} for usage.\n`)

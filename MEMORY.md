@@ -75,9 +75,21 @@ A token/registry protocol on Base (EVM). Key artifacts:
 
 **Post-Deploy TODOs (as of 2026-03-05):**
 - ❌ `setInkdToken($TEST CA)` via Buyback Safe aufrufen
-- ❌ API .env updaten: REGISTRY_ADDRESS + TREASURY_ADDRESS
+- ✅ API .env updaten: REGISTRY_ADDRESS + TREASURY_ADDRESS
 - ❌ $INKD via Clanker (erst wenn $TEST sauber läuft)
 - ❌ Security Audit vor Public Launch
+
+**E2E Test PASSED (2026-03-06):**
+- ✅ createProject ($5 USDC) → TX 0x25642785bb06de399e102e3e943c6e93572fb8b65d3c9cceee45a3e430e413b9
+- ✅ pushVersion ($2 USDC)   → TX 0x7a63bd374bd439a73f9090ac8431cbb338bc4693574e7663f6f7aff595eadf18
+- Project ID: 6 (first real mainnet E2E run)
+
+**x402 Architecture (final — 2026-03-06):**
+- LocalFacilitatorClient — kein CDP, kein JWT-Auth-Problem
+- Route handler führt USDC.transferWithAuthorization() selbst aus (vor Treasury.settle())
+- Explizite Nonce-Verwaltung (nonce tracking durch TX-Chain um stale-nonce zu vermeiden)
+- USDC EIP-712 domain name = "USD Coin" (nicht "USDC")
+- Vercel auto-deploy von GitHub (kein manueller Upload nötig — Internet-Problem umgangen)
 
 **Architecture (final — confirmed 2026-03-05):**
 - Agent pays: Arweave storage cost + 20% markup (DYNAMIC, not fixed fee)

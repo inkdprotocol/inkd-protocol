@@ -3,6 +3,15 @@
  * Permanent on-chain project registry on Base
  */
 
+// ─── x402 Projects Client (pay-per-use API) ───────────────────────────────────
+export { ProjectsClient } from "./ProjectsClient.js";
+export type {
+  ProjectsClientConfig,
+  CreateProjectParams, CreateProjectResult,
+  PushVersionParams,   PushVersionResult,
+  Project, UploadResult, UploadOptions,
+} from "./ProjectsClient.js";
+
 // ─── Agent Vault (wallet-key credential storage) ─────────────────────────────
 export { AgentVault } from "./vault.js";
 
