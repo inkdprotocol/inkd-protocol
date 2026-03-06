@@ -23,53 +23,12 @@
  * Docs: https://x402.org | https://docs.cdp.coinbase.com/x402
  */
 
-import { paymentMiddleware, x402ResourceServer } from '@x402/express'
-import { HTTPFacilitatorClient }                  from '@x402/core/http'
-// @ts-ignore — subpath not in package.json exports map but exists in dist
-import { ExactEvmScheme }                         from '@x402/evm/exact/server'
-import type { RoutesConfig }                      from '@x402/core/server'
-import type { RequestHandler, Request }           from 'express'
-import type { Address }                           from 'viem'
-import { createPrivateKey, sign as cryptoSign, randomBytes } from 'crypto'
-
-
-// ─── CDP JWT (pure Node.js crypto — no jose/cdp-sdk to avoid ESM issues) ──────
-
-function b64url(buf: Buffer): string {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-}
-
-function buildCdpJwt(
-  apiKeyId:      string,
-  apiKeySecret:  string,
-  method:        string,
-  host:          string,
-  path:          string,
-): string {
-  const now     = Math.floor(Date.now() / 1000)
-  const nonce   = randomBytes(16).toString('hex')
-
-  // CDP Ed25519 secret: base64-encoded 64 bytes (first 32 = seed, last 32 = public key)
-  const decoded = Buffer.from(apiKeySecret, 'base64')
-  if (decoded.length !== 64) throw new Error(`CDP key must be 64 bytes, got ${decoded.length}`)
-  const seed = decoded.subarray(0, 32)
-
-  // Build PKCS8 DER for Ed25519 private key
-  // ASN.1: SEQUENCE { version 0, AlgorithmIdentifier { OID 1.3.101.112 }, OCTET STRING { OCTET STRING { seed } } }
-  const pkcs8 = Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed])
-  const privateKey = createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' })
-
-  const header  = b64url(Buffer.from(JSON.stringify({ alg: 'EdDSA', kid: apiKeyId, typ: 'JWT', nonce })))
-  const payload = b64url(Buffer.from(JSON.stringify({
-    sub: apiKeyId, iss: 'cdp',
-    nbf: now, iat: now, exp: now + 120,
-    uris: [`${method} ${host}${path}`],
-  })))
-
-  const signingInput = `${header}.${payload}`
-  const signature    = cryptoSign(null, Buffer.from(signingInput), privateKey)
-  return `${signingInput}.${b64url(signature)}`
-}
+import { paymentMiddlewareFromConfig }  from '@x402/express'
+import { HTTPFacilitatorClient }        from '@x402/core/http'
+import { decodePaymentSignatureHeader } from '@x402/core/http'
+import type { RoutesConfig }            from '@x402/core/server'
+import type { RequestHandler, Request } from 'express'
+import type { Address }                 from 'viem'
 
 // CAIP-2 network identifiers
 export const NETWORK_BASE_MAINNET = 'eip155:8453'
@@ -79,6 +38,10 @@ export const NETWORK_BASE_SEPOLIA = 'eip155:84532'
 export const USDC_BASE_MAINNET = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address
 export const USDC_BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address
 
+// Fixed payment amounts per route (USDC, 6 decimals)
+export const PRICE_CREATE_PROJECT = 5_000_000n  // $5.00
+export const PRICE_PUSH_VERSION   = 2_000_000n  // $2.00
+
 export interface X402Config {
   /** InkdTreasury contract address — receives all USDC payments */
   treasuryAddress: Address
@@ -86,24 +49,20 @@ export interface X402Config {
   facilitatorUrl:  string
   /** Network to accept payments on */
   network:         'mainnet' | 'testnet'
-  /** CDP API Key ID — required for Mainnet CDP facilitator */
-  cdpApiKeyId?:     string | null
-  /** CDP API Key Secret — required for Mainnet CDP facilitator */
-  cdpApiKeySecret?: string | null
 }
 
 /**
  * Build x402 USDC payment middleware for Inkd write endpoints.
  *
- * Agents pay with their wallet — USDC goes directly to InkdTreasury.
- * After payment verification, server calls Treasury.settle() to split revenue.
+ * NOTE: Routes are relative to /v1 mount point — no /v1 prefix here.
+ * NOTE: syncFacilitatorOnStart=false — avoids blocking cold starts on Vercel.
  */
 export function buildX402Middleware(cfg: X402Config): RequestHandler {
   const networkId  = cfg.network === 'mainnet' ? NETWORK_BASE_MAINNET : NETWORK_BASE_SEPOLIA
   const usdcAddr   = cfg.network === 'mainnet' ? USDC_BASE_MAINNET    : USDC_BASE_SEPOLIA
 
   const routes: RoutesConfig = {
-    // Register a project — $5 USDC
+    // Routes are relative to /v1 mount (app.use('/v1', x402))
     'POST /projects': {
       accepts: {
         scheme:  'exact',
@@ -115,9 +74,8 @@ export function buildX402Middleware(cfg: X402Config): RequestHandler {
           name:  'USDC',
         },
       },
-      description: 'Register an AI agent or project on Inkd Protocol (locks $INKD on-chain)',
+      description: 'Register an AI agent or project on Inkd Protocol',
     },
-    // Push a new version — $2 USDC
     'POST /projects/:id/versions': {
       accepts: {
         scheme:  'exact',
@@ -133,49 +91,57 @@ export function buildX402Middleware(cfg: X402Config): RequestHandler {
     },
   }
 
-  // Build CDP JWT auth if credentials provided (required for Mainnet facilitator)
-  // Uses pure Node.js crypto — no jose/cdp-sdk dependency (avoids ESM/CJS conflicts)
-  const cdpFacilitatorHost = 'api.cdp.coinbase.com'
-  const createAuthHeaders = (cfg.cdpApiKeyId && cfg.cdpApiKeySecret)
-    ? () => {
-        const makeBearer = (path: string) => `Bearer ${buildCdpJwt(
-          cfg.cdpApiKeyId!,
-          cfg.cdpApiKeySecret!,
-          'POST',
-          cdpFacilitatorHost,
-          `/platform/v2/x402/${path}`,
-        )}`
-        return Promise.resolve({
-          verify:    { Authorization: makeBearer('verify')    },
-          settle:    { Authorization: makeBearer('settle')    },
-          supported: { Authorization: makeBearer('supported') },
-        })
-      }
-    : undefined
+  const facilitator = new HTTPFacilitatorClient({ url: cfg.facilitatorUrl })
 
-  const facilitator = new HTTPFacilitatorClient({ url: cfg.facilitatorUrl, createAuthHeaders })
-  const server = new x402ResourceServer(facilitator)
-    .register(networkId as `${string}:${string}`, new ExactEvmScheme())
-  return paymentMiddleware(routes, server)
+  // syncFacilitatorOnStart=false: skip facilitator handshake on startup.
+  // Prevents cold-start timeouts on Vercel and avoids blocking the first request.
+  return paymentMiddlewareFromConfig(routes, facilitator, undefined, undefined, undefined, false)
+}
+
+/**
+ * Decode the x402 payment payload from the X-PAYMENT request header.
+ * Returns null if header is absent or malformed.
+ */
+function decodePaymentHeader(req: Request) {
+  try {
+    const header = req.header('x-payment') ?? req.header('payment-signature')
+    if (!header) return null
+    return decodePaymentSignatureHeader(header)
+  } catch {
+    return null
+  }
 }
 
 /**
  * Extract the payer's wallet address from x402 payment headers.
  * This address becomes the on-chain owner of the project/version.
+ *
+ * EIP-3009 exact scheme: payload.authorization.from
  */
 export function getPayerAddress(req: Request): Address | undefined {
+  const payload = decodePaymentHeader(req)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const x402 = (req as any).x402
-  return x402?.payment?.payload?.authorization?.from as Address | undefined
+  const from = (payload?.payload as any)?.authorization?.from
+  return from as Address | undefined
 }
 
 /**
  * Extract the amount paid (in USDC base units, 6 decimals).
- * Returns 5_000_000 for $5.00, 2_000_000 for $2.00, etc.
+ *
+ * Falls back to route-hardcoded amounts if header is absent:
+ *   POST /projects          → 5_000_000 ($5.00)
+ *   POST /projects/.../versions → 2_000_000 ($2.00)
  */
 export function getPaymentAmount(req: Request): bigint | undefined {
+  const payload = decodePaymentHeader(req)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const x402 = (req as any).x402
-  const amount = x402?.payment?.payload?.authorization?.value
-  return amount ? BigInt(amount) : undefined
+  const raw = (payload?.payload as any)?.authorization?.value
+  if (raw) {
+    try { return BigInt(raw) } catch { /* fall through */ }
+  }
+
+  // Fallback: derive amount from route shape
+  if (req.method === 'POST' && req.path === '/') return PRICE_CREATE_PROJECT
+  if (req.method === 'POST' && req.path.includes('/versions')) return PRICE_PUSH_VERSION
+  return undefined
 }

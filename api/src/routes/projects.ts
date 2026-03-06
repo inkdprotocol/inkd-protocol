@@ -13,7 +13,7 @@ import { z }      from 'zod'
 import type { Address } from 'viem'
 import { type ApiConfig, ADDRESSES } from '../config.js'
 import { buildPublicClient, buildWalletClient, normalizePrivateKey } from '../clients.js'
-import { getPayerAddress, getPaymentAmount } from '../middleware/x402.js'
+import { getPayerAddress, getPaymentAmount, PRICE_CREATE_PROJECT, PRICE_PUSH_VERSION } from '../middleware/x402.js'
 import { REGISTRY_ABI, TREASURY_ABI } from '../abis.js'
 import { getArweaveCostUsdc, calculateCharge } from '../arweave.js'
 import { sendError, NotFoundError, BadRequestError, ServiceUnavailableError } from '../errors.js'
@@ -223,12 +223,13 @@ export function projectsRouter(cfg: ApiConfig): Router {
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
       // Settle X402 USDC payment → createProject has no Arweave upload, arweaveCost = 0
-      if (cfg.treasuryAddress && paymentAmount) {
+      const settleAmountCreate = paymentAmount ?? PRICE_CREATE_PROJECT
+      if (cfg.treasuryAddress) {
         await walletClient.writeContract({
           address:      cfg.treasuryAddress,
           abi:          TREASURY_ABI,
           functionName: 'settle',
-          args:         [paymentAmount, 0n],
+          args:         [settleAmountCreate, 0n],
         })
       }
 
@@ -239,7 +240,8 @@ export function projectsRouter(cfg: ApiConfig): Router {
         args:         [name, description, license, isPublic, readmeHash, isAgent, agentEndpoint],
       })
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      // Base Mainnet: ~2s block time — poll every 500ms to minimise latency on Vercel
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 500 })
 
       const total = await publicClient.readContract({
         address:      registryAddress,
@@ -319,7 +321,8 @@ export function projectsRouter(cfg: ApiConfig): Router {
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
       // Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
-      if (cfg.treasuryAddress && paymentAmount) {
+      const settleAmountVersion = paymentAmount ?? PRICE_PUSH_VERSION
+      if (cfg.treasuryAddress) {
         // Calculate arweave cost portion from content size (best-effort)
         let arweaveCost = 0n
         if (contentSize && contentSize > 0) {
@@ -331,7 +334,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
           address:      cfg.treasuryAddress,
           abi:          TREASURY_ABI,
           functionName: 'settle',
-          args:         [paymentAmount, arweaveCost],
+          args:         [settleAmountVersion, arweaveCost],
         })
       }
 
@@ -342,7 +345,8 @@ export function projectsRouter(cfg: ApiConfig): Router {
         args:         [BigInt(id), tag, contentHash, metadataHash],
       })
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      // Base Mainnet: ~2s block time — poll every 500ms to minimise latency on Vercel
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 500 })
 
       res.status(201).json({
         txHash:    hash,

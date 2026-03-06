@@ -172,12 +172,13 @@ function projectsRouter(cfg) {
             const paymentAmount = (0, x402_js_1.getPaymentAmount)(req);
             const { client: walletClient, address: walletAddress } = (0, clients_js_1.buildWalletClient)(cfg, (0, clients_js_1.normalizePrivateKey)(cfg.serverWalletKey));
             // Settle X402 USDC payment → createProject has no Arweave upload, arweaveCost = 0
-            if (cfg.treasuryAddress && paymentAmount) {
+            const settleAmountCreate = paymentAmount ?? x402_js_1.PRICE_CREATE_PROJECT;
+            if (cfg.treasuryAddress) {
                 await walletClient.writeContract({
                     address: cfg.treasuryAddress,
                     abi: abis_js_1.TREASURY_ABI,
                     functionName: 'settle',
-                    args: [paymentAmount, 0n],
+                    args: [settleAmountCreate, 0n],
                 });
             }
             const hash = await walletClient.writeContract({
@@ -186,7 +187,8 @@ function projectsRouter(cfg) {
                 functionName: 'createProject',
                 args: [name, description, license, isPublic, readmeHash, isAgent, agentEndpoint],
             });
-            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+            // Base Mainnet: ~2s block time — poll every 500ms to minimise latency on Vercel
+            const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 500 });
             const total = await publicClient.readContract({
                 address: registryAddress,
                 abi: abis_js_1.REGISTRY_ABI,
@@ -257,7 +259,8 @@ function projectsRouter(cfg) {
             const paymentAmount = (0, x402_js_1.getPaymentAmount)(req);
             const { client: walletClient, address: walletAddress } = (0, clients_js_1.buildWalletClient)(cfg, (0, clients_js_1.normalizePrivateKey)(cfg.serverWalletKey));
             // Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
-            if (cfg.treasuryAddress && paymentAmount) {
+            const settleAmountVersion = paymentAmount ?? x402_js_1.PRICE_PUSH_VERSION;
+            if (cfg.treasuryAddress) {
                 // Calculate arweave cost portion from content size (best-effort)
                 let arweaveCost = 0n;
                 if (contentSize && contentSize > 0) {
@@ -270,7 +273,7 @@ function projectsRouter(cfg) {
                     address: cfg.treasuryAddress,
                     abi: abis_js_1.TREASURY_ABI,
                     functionName: 'settle',
-                    args: [paymentAmount, arweaveCost],
+                    args: [settleAmountVersion, arweaveCost],
                 });
             }
             const hash = await walletClient.writeContract({
@@ -279,7 +282,8 @@ function projectsRouter(cfg) {
                 functionName: 'pushVersion',
                 args: [BigInt(id), tag, contentHash, metadataHash],
             });
-            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+            // Base Mainnet: ~2s block time — poll every 500ms to minimise latency on Vercel
+            const receipt = await publicClient.waitForTransactionReceipt({ hash, pollingInterval: 500 });
             res.status(201).json({
                 txHash: hash,
                 projectId: id.toString(),
