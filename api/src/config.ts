@@ -41,11 +41,12 @@ export interface ApiConfig {
   rateLimitWindowMs: number
   rateLimitMax:      number
   // x402 payment config
-  serverWalletKey:    string | null  // server signs on-chain txns + calls Treasury.settle()
+  serverWalletKey:     string | null  // server signs on-chain txns + calls Treasury.settle()
   serverWalletAddress: Address | null
-  treasuryAddress:    Address | null  // InkdTreasury — x402 payTo address
-  x402FacilitatorUrl: string
-  x402Enabled:        boolean
+  treasuryAddress:     Address | null  // InkdTreasury — x402 payTo address
+  usdcAddress:         Address         // USDC token (for transferWithAuthorization)
+  x402FacilitatorUrl:  string
+  x402Enabled:         boolean
   // CDP API credentials (for Mainnet CDP facilitator auth)
   cdpApiKeyId:     string | null
   cdpApiKeySecret: string | null
@@ -77,6 +78,9 @@ export function loadConfig(): ApiConfig {
     serverWalletKey,
     serverWalletAddress,
     treasuryAddress,
+    usdcAddress: (network === 'mainnet'
+      ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+      : '0x036CbD53842c5426634e7929541eC2318f3dCF7e') as Address,
     x402FacilitatorUrl: process.env['X402_FACILITATOR_URL'] ?? 'https://x402.org/facilitator',
     x402Enabled: Boolean(treasuryAddress) && process.env['X402_ENABLED'] !== 'false',
     cdpApiKeyId:     process.env['CDP_API_KEY_ID']     ?? null,

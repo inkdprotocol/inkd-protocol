@@ -4,9 +4,9 @@
  */
 
 import { wrapFetchWithPayment, x402Client } from '@x402/fetch'
-import { ExactEvmScheme }                    from '@x402/evm'
+import { ExactEvmScheme, toClientEvmSigner } from '@x402/evm'
 import { privateKeyToAccount }               from 'viem/accounts'
-import { createWalletClient, publicActions, http } from 'viem'
+import { createWalletClient, createPublicClient, http } from 'viem'
 import { base }                              from 'viem/chains'
 
 const AGENT_PRIVATE_KEY = (process.env['AGENT_PRIVATE_KEY'] ?? '') as `0x${string}`
@@ -16,11 +16,19 @@ if (!AGENT_PRIVATE_KEY) { console.error('AGENT_PRIVATE_KEY required'); process.e
 
 const account = privateKeyToAccount(AGENT_PRIVATE_KEY)
 
-// Extend wallet client with publicActions — required by ExactEvmScheme (needs readContract)
-const walletClient = createWalletClient({ account, chain: base, transport: http() }).extend(publicActions)
+const walletClient = createWalletClient({ account, chain: base, transport: http() })
+const publicClient = createPublicClient({ chain: base, transport: http() })
 
-// Build x402 client — EIP-3009 on Base Mainnet (eip155:8453)
-const client = new x402Client().register('eip155:8453', new ExactEvmScheme(walletClient as any))
+// ClientEvmSigner — .address must be at top level (walletClient.address is undefined in viem)
+const signer = {
+  address:       account.address,
+  signTypedData: (msg: Parameters<typeof walletClient.signTypedData>[0]) =>
+    walletClient.signTypedData({ ...msg, account } as any),
+  readContract:  publicClient.readContract.bind(publicClient),
+}
+
+// x402 client — EIP-3009 on Base Mainnet (eip155:8453)
+const client   = new x402Client().register('eip155:8453', new ExactEvmScheme(signer as any))
 const fetchPay = wrapFetchWithPayment(fetch, client)
 
 console.log(`\n══════════════════════════════════════════════`)
@@ -37,12 +45,15 @@ async function testCreateProject(): Promise<string | null> {
     res = await fetchPay(`${API_URL}/v1/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description: 'E2E test', license: 'MIT', isPublic: true, isAgent: true, agentEndpoint: 'https://agent.example.com' }),
+      body: JSON.stringify({
+        name, description: 'E2E mainnet test', license: 'MIT',
+        isPublic: true, isAgent: true, agentEndpoint: 'https://agent.example.com',
+      }),
     })
   } catch (e) { console.error('  ❌ FETCH ERROR:', e); return null }
 
   const body = await res.json()
-  if (!res.ok) { console.error(`  ❌ [${res.status}]`, body); return null }
+  if (!res.ok) { console.error(`  ❌ [${res.status}]`, JSON.stringify(body, null, 2)); return null }
   console.log(`  ✅ [${res.status}] projectId=${body.projectId} tx=${body.txHash}`)
   console.log(`     https://basescan.org/tx/${body.txHash}\n`)
   return body.projectId
@@ -61,7 +72,7 @@ async function testPushVersion(projectId: string): Promise<boolean> {
   } catch (e) { console.error('  ❌ FETCH ERROR:', e); return false }
 
   const body = await res.json()
-  if (!res.ok) { console.error(`  ❌ [${res.status}]`, body); return false }
+  if (!res.ok) { console.error(`  ❌ [${res.status}]`, JSON.stringify(body, null, 2)); return false }
   console.log(`  ✅ [${res.status}] tag=${body.tag} tx=${body.txHash}`)
   console.log(`     https://basescan.org/tx/${body.txHash}\n`)
   return true
@@ -72,12 +83,12 @@ async function testRead(projectId: string) {
   const res  = await fetch(`${API_URL}/v1/projects/${projectId}`)
   const body = await res.json()
   if (!res.ok) { console.error(`  ❌ [${res.status}]`, body); return }
-  console.log(`  ✅ [${res.status}]`, JSON.stringify(body.data ?? body, null, 2))
+  console.log(`  ✅ [${res.status}]  name=${body.data?.name ?? body.name}`)
 }
 
 async function main() {
   const projectId = await testCreateProject()
-  if (!projectId) { console.log('RESULT: ❌ aborted'); process.exit(1) }
+  if (!projectId) { console.log('\nRESULT: ❌ aborted'); process.exit(1) }
   const ok = await testPushVersion(projectId)
   await testRead(projectId)
   console.log('══════════════════════════════════════════════')

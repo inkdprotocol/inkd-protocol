@@ -41,8 +41,8 @@ export declare function buildPublicClient(cfg: ApiConfig): {
     getBlobBaseFee: () => Promise<import("viem").GetBlobBaseFeeReturnType>;
     getBlock: <includeTransactions extends boolean = false, blockTag extends import("viem").BlockTag = "latest">(args?: import("viem").GetBlockParameters<includeTransactions, blockTag> | undefined) => Promise<{
         number: blockTag extends "pending" ? null : bigint;
-        hash: blockTag extends "pending" ? null : `0x${string}`;
         nonce: blockTag extends "pending" ? null : `0x${string}`;
+        hash: blockTag extends "pending" ? null : `0x${string}`;
         logsBloom: blockTag extends "pending" ? null : `0x${string}`;
         baseFeePerGas: bigint | null;
         blobGasUsed: bigint;
@@ -67,18 +67,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
         withdrawals?: import("viem").Withdrawal[] | undefined | undefined;
         withdrawalsRoot?: `0x${string}` | undefined;
         transactions: includeTransactions extends true ? ({
-            yParity?: undefined | undefined;
             from: Address;
+            to: Address | null;
+            value: bigint;
+            nonce: number;
+            yParity?: undefined | undefined;
             gas: bigint;
             hash: import("viem").Hash;
             input: import("viem").Hex;
-            nonce: number;
             r: import("viem").Hex;
             s: import("viem").Hex;
-            to: Address | null;
             typeHex: import("viem").Hex | null;
             v: bigint;
-            value: bigint;
             accessList?: undefined | undefined;
             authorizationList?: undefined | undefined;
             blobVersionedHashes?: undefined | undefined;
@@ -92,18 +92,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
             blockNumber: (blockTag extends "pending" ? true : false) extends infer T_1 ? T_1 extends (blockTag extends "pending" ? true : false) ? T_1 extends true ? null : bigint : never : never;
             transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_2 ? T_2 extends (blockTag extends "pending" ? true : false) ? T_2 extends true ? null : number : never : never;
         } | {
-            yParity: number;
             from: Address;
+            to: Address | null;
+            value: bigint;
+            nonce: number;
+            yParity: number;
             gas: bigint;
             hash: import("viem").Hash;
             input: import("viem").Hex;
-            nonce: number;
             r: import("viem").Hex;
             s: import("viem").Hex;
-            to: Address | null;
             typeHex: import("viem").Hex | null;
             v: bigint;
-            value: bigint;
             accessList: import("viem").AccessList;
             authorizationList?: undefined | undefined;
             blobVersionedHashes?: undefined | undefined;
@@ -117,18 +117,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
             blockNumber: (blockTag extends "pending" ? true : false) extends infer T_4 ? T_4 extends (blockTag extends "pending" ? true : false) ? T_4 extends true ? null : bigint : never : never;
             transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_5 ? T_5 extends (blockTag extends "pending" ? true : false) ? T_5 extends true ? null : number : never : never;
         } | {
-            yParity: number;
             from: Address;
+            to: Address | null;
+            value: bigint;
+            nonce: number;
+            yParity: number;
             gas: bigint;
             hash: import("viem").Hash;
             input: import("viem").Hex;
-            nonce: number;
             r: import("viem").Hex;
             s: import("viem").Hex;
-            to: Address | null;
             typeHex: import("viem").Hex | null;
             v: bigint;
-            value: bigint;
             accessList: import("viem").AccessList;
             authorizationList?: undefined | undefined;
             blobVersionedHashes?: undefined | undefined;
@@ -142,18 +142,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
             blockNumber: (blockTag extends "pending" ? true : false) extends infer T_7 ? T_7 extends (blockTag extends "pending" ? true : false) ? T_7 extends true ? null : bigint : never : never;
             transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_8 ? T_8 extends (blockTag extends "pending" ? true : false) ? T_8 extends true ? null : number : never : never;
         } | {
-            yParity: number;
             from: Address;
+            to: Address | null;
+            value: bigint;
+            nonce: number;
+            yParity: number;
             gas: bigint;
             hash: import("viem").Hash;
             input: import("viem").Hex;
-            nonce: number;
             r: import("viem").Hex;
             s: import("viem").Hex;
-            to: Address | null;
             typeHex: import("viem").Hex | null;
             v: bigint;
-            value: bigint;
             accessList: import("viem").AccessList;
             authorizationList?: undefined | undefined;
             blobVersionedHashes: readonly import("viem").Hex[];
@@ -167,18 +167,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
             blockNumber: (blockTag extends "pending" ? true : false) extends infer T_10 ? T_10 extends (blockTag extends "pending" ? true : false) ? T_10 extends true ? null : bigint : never : never;
             transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_11 ? T_11 extends (blockTag extends "pending" ? true : false) ? T_11 extends true ? null : number : never : never;
         } | {
-            yParity: number;
             from: Address;
+            to: Address | null;
+            value: bigint;
+            nonce: number;
+            yParity: number;
             gas: bigint;
             hash: import("viem").Hash;
             input: import("viem").Hex;
-            nonce: number;
             r: import("viem").Hex;
             s: import("viem").Hex;
-            to: Address | null;
             typeHex: import("viem").Hex | null;
             v: bigint;
-            value: bigint;
             accessList: import("viem").AccessList;
             authorizationList: import("viem").SignedAuthorizationList;
             blobVersionedHashes?: undefined | undefined;
@@ -218,18 +218,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
     } | undefined) => Promise<import("viem").EstimateMaxPriorityFeePerGasReturnType>;
     getStorageAt: (args: import("viem").GetStorageAtParameters) => Promise<import("viem").GetStorageAtReturnType>;
     getTransaction: <blockTag extends import("viem").BlockTag = "latest">(args: import("viem").GetTransactionParameters<blockTag>) => Promise<{
-        yParity?: undefined | undefined;
         from: Address;
+        to: Address | null;
+        value: bigint;
+        nonce: number;
+        yParity?: undefined | undefined;
         gas: bigint;
         hash: import("viem").Hash;
         input: import("viem").Hex;
-        nonce: number;
         r: import("viem").Hex;
         s: import("viem").Hex;
-        to: Address | null;
         typeHex: import("viem").Hex | null;
         v: bigint;
-        value: bigint;
         accessList?: undefined | undefined;
         authorizationList?: undefined | undefined;
         blobVersionedHashes?: undefined | undefined;
@@ -243,18 +243,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
         blockNumber: (blockTag extends "pending" ? true : false) extends infer T_1 ? T_1 extends (blockTag extends "pending" ? true : false) ? T_1 extends true ? null : bigint : never : never;
         transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_2 ? T_2 extends (blockTag extends "pending" ? true : false) ? T_2 extends true ? null : number : never : never;
     } | {
-        yParity: number;
         from: Address;
+        to: Address | null;
+        value: bigint;
+        nonce: number;
+        yParity: number;
         gas: bigint;
         hash: import("viem").Hash;
         input: import("viem").Hex;
-        nonce: number;
         r: import("viem").Hex;
         s: import("viem").Hex;
-        to: Address | null;
         typeHex: import("viem").Hex | null;
         v: bigint;
-        value: bigint;
         accessList: import("viem").AccessList;
         authorizationList?: undefined | undefined;
         blobVersionedHashes?: undefined | undefined;
@@ -268,18 +268,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
         blockNumber: (blockTag extends "pending" ? true : false) extends infer T_4 ? T_4 extends (blockTag extends "pending" ? true : false) ? T_4 extends true ? null : bigint : never : never;
         transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_5 ? T_5 extends (blockTag extends "pending" ? true : false) ? T_5 extends true ? null : number : never : never;
     } | {
-        yParity: number;
         from: Address;
+        to: Address | null;
+        value: bigint;
+        nonce: number;
+        yParity: number;
         gas: bigint;
         hash: import("viem").Hash;
         input: import("viem").Hex;
-        nonce: number;
         r: import("viem").Hex;
         s: import("viem").Hex;
-        to: Address | null;
         typeHex: import("viem").Hex | null;
         v: bigint;
-        value: bigint;
         accessList: import("viem").AccessList;
         authorizationList?: undefined | undefined;
         blobVersionedHashes?: undefined | undefined;
@@ -293,18 +293,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
         blockNumber: (blockTag extends "pending" ? true : false) extends infer T_7 ? T_7 extends (blockTag extends "pending" ? true : false) ? T_7 extends true ? null : bigint : never : never;
         transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_8 ? T_8 extends (blockTag extends "pending" ? true : false) ? T_8 extends true ? null : number : never : never;
     } | {
-        yParity: number;
         from: Address;
+        to: Address | null;
+        value: bigint;
+        nonce: number;
+        yParity: number;
         gas: bigint;
         hash: import("viem").Hash;
         input: import("viem").Hex;
-        nonce: number;
         r: import("viem").Hex;
         s: import("viem").Hex;
-        to: Address | null;
         typeHex: import("viem").Hex | null;
         v: bigint;
-        value: bigint;
         accessList: import("viem").AccessList;
         authorizationList?: undefined | undefined;
         blobVersionedHashes: readonly import("viem").Hex[];
@@ -318,18 +318,18 @@ export declare function buildPublicClient(cfg: ApiConfig): {
         blockNumber: (blockTag extends "pending" ? true : false) extends infer T_10 ? T_10 extends (blockTag extends "pending" ? true : false) ? T_10 extends true ? null : bigint : never : never;
         transactionIndex: (blockTag extends "pending" ? true : false) extends infer T_11 ? T_11 extends (blockTag extends "pending" ? true : false) ? T_11 extends true ? null : number : never : never;
     } | {
-        yParity: number;
         from: Address;
+        to: Address | null;
+        value: bigint;
+        nonce: number;
+        yParity: number;
         gas: bigint;
         hash: import("viem").Hash;
         input: import("viem").Hex;
-        nonce: number;
         r: import("viem").Hex;
         s: import("viem").Hex;
-        to: Address | null;
         typeHex: import("viem").Hex | null;
         v: bigint;
-        value: bigint;
         accessList: import("viem").AccessList;
         authorizationList: import("viem").SignedAuthorizationList;
         blobVersionedHashes?: undefined | undefined;
@@ -3599,7 +3599,7 @@ export declare function buildPublicClient(cfg: ApiConfig): {
         authorizationList: import("viem").TransactionSerializableEIP7702["authorizationList"];
     } ? "eip7702" : never) | (request["type"] extends string | undefined ? Extract<request["type"], string> : never)>) ? T_12 extends "eip7702" ? import("viem").TransactionRequestEIP7702 : never : never : never)>> & {
         chainId?: number | undefined;
-    }, (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "fees" | "gas" | "nonce" | "blobVersionedHashes" | "chainId" | "type") extends infer T_13 ? T_13 extends (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "fees" | "gas" | "nonce" | "blobVersionedHashes" | "chainId" | "type") ? T_13 extends "fees" ? "gasPrice" | "maxFeePerGas" | "maxPriorityFeePerGas" : T_13 : never : never> & (unknown extends request["kzg"] ? {} : Pick<request, "kzg">) extends infer T ? { [K in keyof T]: T[K]; } : never>;
+    }, (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "nonce" | "fees" | "gas" | "blobVersionedHashes" | "chainId" | "type") extends infer T_13 ? T_13 extends (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "nonce" | "fees" | "gas" | "blobVersionedHashes" | "chainId" | "type") ? T_13 extends "fees" ? "gasPrice" | "maxFeePerGas" | "maxPriorityFeePerGas" : T_13 : never : never> & (unknown extends request["kzg"] ? {} : Pick<request, "kzg">) extends infer T ? { [K in keyof T]: T[K]; } : never>;
     readContract: <const abi extends import("viem").Abi | readonly unknown[], functionName extends import("viem").ContractFunctionName<abi, "pure" | "view">, const args extends import("viem").ContractFunctionArgs<abi, "pure" | "view", functionName>>(args: import("viem").ReadContractParameters<abi, functionName, args>) => Promise<import("viem").ReadContractReturnType<abi, functionName, args>>;
     sendRawTransaction: (args: import("viem").SendRawTransactionParameters) => Promise<import("viem").SendRawTransactionReturnType>;
     sendRawTransactionSync: (args: import("viem").SendRawTransactionSyncParameters) => Promise<import("viem").TransactionReceipt>;
@@ -3707,6 +3707,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -3739,7 +3740,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -3809,6 +3809,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -3841,7 +3842,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -3912,6 +3912,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -3944,7 +3945,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -4014,6 +4014,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -4046,7 +4047,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -4135,6 +4135,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -4167,7 +4168,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -4237,6 +4237,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -4269,7 +4270,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -4340,6 +4340,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -4372,7 +4373,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -4442,6 +4442,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -4474,7 +4475,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -4568,6 +4568,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -4600,7 +4601,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -4670,6 +4670,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -4702,7 +4703,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -4773,6 +4773,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -4805,7 +4806,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -4875,6 +4875,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -4907,7 +4908,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -4996,6 +4996,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -5028,7 +5029,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -5098,6 +5098,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -5130,7 +5131,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -5201,6 +5201,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -5233,7 +5234,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -5303,6 +5303,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -5335,7 +5336,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -5427,6 +5427,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -5459,7 +5460,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -5529,6 +5529,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -5561,7 +5562,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -5632,6 +5632,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -5664,7 +5665,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -5734,6 +5734,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -5766,7 +5767,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -5854,6 +5854,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -5886,7 +5887,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -5956,6 +5956,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -5988,7 +5989,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -6059,6 +6059,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -6091,7 +6092,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -6161,6 +6161,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -6193,7 +6194,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -9509,7 +9509,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
             authorizationList: import("viem").TransactionSerializableEIP7702["authorizationList"];
         } ? "eip7702" : never) | (request["type"] extends string | undefined ? Extract<request["type"], string> : never)>) ? T_12 extends "eip7702" ? import("viem").TransactionRequestEIP7702 : never : never : never)>> & {
             chainId?: number | undefined;
-        }, (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "fees" | "gas" | "nonce" | "blobVersionedHashes" | "chainId" | "type") extends infer T_13 ? T_13 extends (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "fees" | "gas" | "nonce" | "blobVersionedHashes" | "chainId" | "type") ? T_13 extends "fees" ? "gasPrice" | "maxFeePerGas" | "maxPriorityFeePerGas" : T_13 : never : never> & (unknown extends request["kzg"] ? {} : Pick<request, "kzg">) extends infer T ? { [K in keyof T]: T[K]; } : never>;
+        }, (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "nonce" | "fees" | "gas" | "blobVersionedHashes" | "chainId" | "type") extends infer T_13 ? T_13 extends (request["parameters"] extends readonly import("viem").PrepareTransactionRequestParameterType[] ? request["parameters"][number] : "nonce" | "fees" | "gas" | "blobVersionedHashes" | "chainId" | "type") ? T_13 extends "fees" ? "gasPrice" | "maxFeePerGas" | "maxPriorityFeePerGas" : T_13 : never : never> & (unknown extends request["kzg"] ? {} : Pick<request, "kzg">) extends infer T ? { [K in keyof T]: T[K]; } : never>;
         requestAddresses: () => Promise<import("viem").RequestAddressesReturnType>;
         requestPermissions: (args: import("viem").RequestPermissionsParameters) => Promise<import("viem").RequestPermissionsReturnType>;
         sendCalls: <const calls extends readonly unknown[], chainOverride extends import("viem").Chain | undefined = undefined>(parameters: import("viem").SendCallsParameters<import("viem").Chain, {
@@ -9532,6 +9532,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -9564,7 +9565,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -9634,6 +9634,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -9666,7 +9667,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -9737,6 +9737,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -9769,7 +9770,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -9839,6 +9839,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -9871,7 +9872,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -9965,6 +9965,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -9997,7 +9998,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -10067,6 +10067,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -10099,7 +10100,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -10170,6 +10170,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -10202,7 +10203,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -10272,6 +10272,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -10304,7 +10305,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -10408,6 +10408,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -10440,7 +10441,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -10510,6 +10510,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -10542,7 +10543,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -10613,6 +10613,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -10645,7 +10646,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -10715,6 +10715,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -10747,7 +10748,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -10836,6 +10836,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -10868,7 +10869,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -10938,6 +10938,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -10970,7 +10971,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -11041,6 +11041,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -11073,7 +11074,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -11143,6 +11143,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -11175,7 +11176,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -11265,6 +11265,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -11297,7 +11298,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -11367,6 +11367,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -11399,7 +11400,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -11470,6 +11470,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -11502,7 +11503,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -11572,6 +11572,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -11604,7 +11605,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -11693,6 +11693,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -11725,7 +11726,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -11795,6 +11795,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -11827,7 +11828,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -11898,6 +11898,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -11930,7 +11931,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -12000,6 +12000,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -12032,7 +12033,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -12121,6 +12121,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -12153,7 +12154,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -12223,6 +12223,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -12255,7 +12256,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -12326,6 +12326,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -12358,7 +12359,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -12428,6 +12428,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -12460,7 +12461,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -13427,6 +13427,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
             [x: `uint256[${string}]`]: undefined;
             [x: `address[${string}]`]: undefined;
             [x: `bool[${string}]`]: undefined;
+            [x: `bytes32[${string}]`]: undefined;
             [x: `bytes[${string}]`]: undefined;
             [x: `bytes1[${string}]`]: undefined;
             [x: `bytes12[${string}]`]: undefined;
@@ -13459,7 +13460,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
             [x: `bytes29[${string}]`]: undefined;
             [x: `bytes30[${string}]`]: undefined;
             [x: `bytes31[${string}]`]: undefined;
-            [x: `bytes32[${string}]`]: undefined;
             [x: `int[${string}]`]: undefined;
             [x: `int8[${string}]`]: undefined;
             [x: `int16[${string}]`]: undefined;
@@ -13529,6 +13529,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
             uint256?: undefined;
             address?: undefined;
             bool?: undefined;
+            bytes32?: undefined;
             bytes?: undefined;
             bytes1?: undefined;
             bytes12?: undefined;
@@ -13561,7 +13562,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
             bytes29?: undefined;
             bytes30?: undefined;
             bytes31?: undefined;
-            bytes32?: undefined;
             int8?: undefined;
             int16?: undefined;
             int24?: undefined;
@@ -13647,6 +13647,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -13679,7 +13680,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -13749,6 +13749,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -13781,7 +13782,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -13852,6 +13852,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -13884,7 +13885,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -13954,6 +13954,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -13986,7 +13987,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -14078,6 +14078,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -14110,7 +14111,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -14180,6 +14180,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -14212,7 +14213,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -14283,6 +14283,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -14315,7 +14316,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -14385,6 +14385,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -14417,7 +14418,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -14506,6 +14506,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -14538,7 +14539,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -14608,6 +14608,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -14640,7 +14641,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -14711,6 +14711,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -14743,7 +14744,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -14813,6 +14813,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -14845,7 +14846,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -14950,6 +14950,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -14982,7 +14983,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -15052,6 +15052,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -15084,7 +15085,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -15155,6 +15155,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -15187,7 +15188,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -15257,6 +15257,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -15289,7 +15290,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -15377,6 +15377,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -15409,7 +15410,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -15479,6 +15479,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -15511,7 +15512,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -15582,6 +15582,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -15614,7 +15615,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -15684,6 +15684,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -15716,7 +15717,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -15804,6 +15804,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -15836,7 +15837,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -15906,6 +15906,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -15938,7 +15939,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -16009,6 +16009,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -16041,7 +16042,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -16111,6 +16111,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -16143,7 +16144,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -16231,6 +16231,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -16263,7 +16264,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -16333,6 +16333,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -16365,7 +16366,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -16436,6 +16436,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -16468,7 +16469,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -16538,6 +16538,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -16570,7 +16571,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -16658,6 +16658,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -16690,7 +16691,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -16760,6 +16760,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -16792,7 +16793,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -16863,6 +16863,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -16895,7 +16896,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -16965,6 +16965,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -16997,7 +16998,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -17085,6 +17085,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -17117,7 +17118,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -17187,6 +17187,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -17219,7 +17220,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;
@@ -17290,6 +17290,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `uint256[${string}]`]: undefined;
                 [x: `address[${string}]`]: undefined;
                 [x: `bool[${string}]`]: undefined;
+                [x: `bytes32[${string}]`]: undefined;
                 [x: `bytes[${string}]`]: undefined;
                 [x: `bytes1[${string}]`]: undefined;
                 [x: `bytes12[${string}]`]: undefined;
@@ -17322,7 +17323,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 [x: `bytes29[${string}]`]: undefined;
                 [x: `bytes30[${string}]`]: undefined;
                 [x: `bytes31[${string}]`]: undefined;
-                [x: `bytes32[${string}]`]: undefined;
                 [x: `int[${string}]`]: undefined;
                 [x: `int8[${string}]`]: undefined;
                 [x: `int16[${string}]`]: undefined;
@@ -17392,6 +17392,7 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 uint256?: undefined;
                 address?: undefined;
                 bool?: undefined;
+                bytes32?: undefined;
                 bytes?: undefined;
                 bytes1?: undefined;
                 bytes12?: undefined;
@@ -17424,7 +17425,6 @@ export declare function buildWalletClient(cfg: ApiConfig, privateKey: `0x${strin
                 bytes29?: undefined;
                 bytes30?: undefined;
                 bytes31?: undefined;
-                bytes32?: undefined;
                 int8?: undefined;
                 int16?: undefined;
                 int24?: undefined;

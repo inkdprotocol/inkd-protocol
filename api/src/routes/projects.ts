@@ -14,7 +14,8 @@ import type { Address } from 'viem'
 import { type ApiConfig, ADDRESSES } from '../config.js'
 import { buildPublicClient, buildWalletClient, normalizePrivateKey } from '../clients.js'
 import { getPayerAddress, getPaymentAmount, PRICE_CREATE_PROJECT, PRICE_PUSH_VERSION } from '../middleware/x402.js'
-import { REGISTRY_ABI, TREASURY_ABI } from '../abis.js'
+import { decodePaymentSignatureHeader } from '@x402/core/http'
+import { REGISTRY_ABI, TREASURY_ABI, USDC_ABI } from '../abis.js'
 import { getArweaveCostUsdc, calculateCharge } from '../arweave.js'
 import { sendError, NotFoundError, BadRequestError, ServiceUnavailableError } from '../errors.js'
 
@@ -150,6 +151,40 @@ export function projectsRouter(cfg: ApiConfig): Router {
     }
   })
 
+  // ─── USDC transferWithAuthorization helper ─────────────────────────────────
+  // Executes the EIP-3009 signed transfer from the X-PAYMENT header.
+  // Must be called BEFORE Treasury.settle() so the USDC is in Treasury first.
+  async function executeUsdcTransfer(req: import('express').Request, walletClientWrapper: ReturnType<typeof buildWalletClient>['client'], usdcAddress: Address) {
+    const header = req.header('x-payment') ?? req.header('payment-signature')
+    if (!header) return
+    try {
+      const paymentPayload = decodePaymentSignatureHeader(header)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const auth = (paymentPayload?.payload as any)?.authorization
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sig  = (paymentPayload?.payload as any)?.signature
+      if (!auth || !sig) return
+
+      await walletClientWrapper.writeContract({
+        address:      usdcAddress,
+        abi:          USDC_ABI,
+        functionName: 'transferWithAuthorization',
+        args: [
+          auth.from        as Address,
+          auth.to          as Address,
+          BigInt(auth.value),
+          BigInt(auth.validAfter),
+          BigInt(auth.validBefore),
+          auth.nonce       as `0x${string}`,
+          sig              as `0x${string}`,
+        ],
+      })
+    } catch (err) {
+      // Non-fatal if transfer fails (USDC might already be in Treasury)
+      console.warn('[x402] executeUsdcTransfer warning:', err instanceof Error ? err.message : err)
+    }
+  }
+
   // ── GET /v1/projects/estimate?bytes=N ──────────────────────────────────────
   // NOTE: must be registered BEFORE /:id to avoid Express matching 'estimate' as an id param.
   // Returns the USDC charge (arweave cost + 20% markup) for a given content size.
@@ -222,7 +257,12 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const { client: walletClient, address: walletAddress } =
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
-      // Settle X402 USDC payment → createProject has no Arweave upload, arweaveCost = 0
+      // Step 1: Execute EIP-3009 USDC transfer → moves funds into Treasury
+      if (cfg.usdcAddress && cfg.treasuryAddress) {
+        await executeUsdcTransfer(req, walletClient, cfg.usdcAddress)
+      }
+
+      // Step 2: Settle X402 USDC payment → splits revenue (arweaveCost = 0 for createProject)
       const settleAmountCreate = paymentAmount ?? PRICE_CREATE_PROJECT
       if (cfg.treasuryAddress) {
         await walletClient.writeContract({
@@ -320,7 +360,12 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const { client: walletClient, address: walletAddress } =
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
-      // Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
+      // Step 1: Execute EIP-3009 USDC transfer → moves funds into Treasury
+      if (cfg.usdcAddress && cfg.treasuryAddress) {
+        await executeUsdcTransfer(req, walletClient, cfg.usdcAddress)
+      }
+
+      // Step 2: Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
       const settleAmountVersion = paymentAmount ?? PRICE_PUSH_VERSION
       if (cfg.treasuryAddress) {
         // Calculate arweave cost portion from content size (best-effort)

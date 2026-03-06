@@ -4,7 +4,7 @@
  * Only the functions/events needed to serve API requests.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TREASURY_ABI = exports.TOKEN_ABI = exports.REGISTRY_ABI = void 0;
+exports.USDC_ABI = exports.TREASURY_ABI = exports.TOKEN_ABI = exports.REGISTRY_ABI = void 0;
 exports.REGISTRY_ABI = [
     // ── Read ──────────────────────────────────────────────────────────────────
     {
@@ -216,6 +216,24 @@ exports.TREASURY_ABI = [
         stateMutability: 'view',
         inputs: [],
         outputs: [{ type: 'uint256' }],
+    },
+];
+// ─── USDC EIP-3009 ABI (Circle FiatToken v2.x on Base) ───────────────────────
+exports.USDC_ABI = [
+    {
+        name: 'transferWithAuthorization',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'from', type: 'address' },
+            { name: 'to', type: 'address' },
+            { name: 'value', type: 'uint256' },
+            { name: 'validAfter', type: 'uint256' },
+            { name: 'validBefore', type: 'uint256' },
+            { name: 'nonce', type: 'bytes32' },
+            { name: 'signature', type: 'bytes' },
+        ],
+        outputs: [],
     },
 ];
 //# sourceMappingURL=abis.js.map

@@ -329,4 +329,32 @@ export declare const TREASURY_ABI: readonly [{
         readonly type: "uint256";
     }];
 }];
+export declare const USDC_ABI: readonly [{
+    readonly name: "transferWithAuthorization";
+    readonly type: "function";
+    readonly stateMutability: "nonpayable";
+    readonly inputs: readonly [{
+        readonly name: "from";
+        readonly type: "address";
+    }, {
+        readonly name: "to";
+        readonly type: "address";
+    }, {
+        readonly name: "value";
+        readonly type: "uint256";
+    }, {
+        readonly name: "validAfter";
+        readonly type: "uint256";
+    }, {
+        readonly name: "validBefore";
+        readonly type: "uint256";
+    }, {
+        readonly name: "nonce";
+        readonly type: "bytes32";
+    }, {
+        readonly name: "signature";
+        readonly type: "bytes";
+    }];
+    readonly outputs: readonly [];
+}];
 //# sourceMappingURL=abis.d.ts.map
