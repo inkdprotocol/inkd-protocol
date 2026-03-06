@@ -218,3 +218,23 @@ export const TREASURY_ABI = [
     outputs: [{ type: 'uint256' }],
   },
 ] as const
+
+// ─── USDC EIP-3009 ABI (Circle FiatToken v2.x on Base) ───────────────────────
+
+export const USDC_ABI = [
+  {
+    name: 'transferWithAuthorization',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'from',        type: 'address' },
+      { name: 'to',          type: 'address' },
+      { name: 'value',       type: 'uint256' },
+      { name: 'validAfter',  type: 'uint256' },
+      { name: 'validBefore', type: 'uint256' },
+      { name: 'nonce',       type: 'bytes32' },
+      { name: 'signature',   type: 'bytes'   },
+    ],
+    outputs: [],
+  },
+] as const

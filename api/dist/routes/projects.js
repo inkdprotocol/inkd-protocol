@@ -15,6 +15,7 @@ const zod_1 = require("zod");
 const config_js_1 = require("../config.js");
 const clients_js_1 = require("../clients.js");
 const x402_js_1 = require("../middleware/x402.js");
+const http_1 = require("@x402/core/http");
 const abis_js_1 = require("../abis.js");
 const arweave_js_1 = require("../arweave.js");
 const errors_js_1 = require("../errors.js");
@@ -108,6 +109,41 @@ function projectsRouter(cfg) {
             (0, errors_js_1.sendError)(res, err);
         }
     });
+    // ─── USDC transferWithAuthorization helper ─────────────────────────────────
+    // Executes the EIP-3009 signed transfer from the X-PAYMENT header.
+    // Must be called BEFORE Treasury.settle() so the USDC is in Treasury first.
+    async function executeUsdcTransfer(req, walletClientWrapper, usdcAddress) {
+        const header = req.header('x-payment') ?? req.header('payment-signature');
+        if (!header)
+            return;
+        try {
+            const paymentPayload = (0, http_1.decodePaymentSignatureHeader)(header);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const auth = paymentPayload?.payload?.authorization;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sig = paymentPayload?.payload?.signature;
+            if (!auth || !sig)
+                return;
+            await walletClientWrapper.writeContract({
+                address: usdcAddress,
+                abi: abis_js_1.USDC_ABI,
+                functionName: 'transferWithAuthorization',
+                args: [
+                    auth.from,
+                    auth.to,
+                    BigInt(auth.value),
+                    BigInt(auth.validAfter),
+                    BigInt(auth.validBefore),
+                    auth.nonce,
+                    sig,
+                ],
+            });
+        }
+        catch (err) {
+            // Non-fatal if transfer fails (USDC might already be in Treasury)
+            console.warn('[x402] executeUsdcTransfer warning:', err instanceof Error ? err.message : err);
+        }
+    }
     // ── GET /v1/projects/estimate?bytes=N ──────────────────────────────────────
     // NOTE: must be registered BEFORE /:id to avoid Express matching 'estimate' as an id param.
     // Returns the USDC charge (arweave cost + 20% markup) for a given content size.
@@ -171,7 +207,11 @@ function projectsRouter(cfg) {
             const payerAddress = (0, x402_js_1.getPayerAddress)(req);
             const paymentAmount = (0, x402_js_1.getPaymentAmount)(req);
             const { client: walletClient, address: walletAddress } = (0, clients_js_1.buildWalletClient)(cfg, (0, clients_js_1.normalizePrivateKey)(cfg.serverWalletKey));
-            // Settle X402 USDC payment → createProject has no Arweave upload, arweaveCost = 0
+            // Step 1: Execute EIP-3009 USDC transfer → moves funds into Treasury
+            if (cfg.usdcAddress && cfg.treasuryAddress) {
+                await executeUsdcTransfer(req, walletClient, cfg.usdcAddress);
+            }
+            // Step 2: Settle X402 USDC payment → splits revenue (arweaveCost = 0 for createProject)
             const settleAmountCreate = paymentAmount ?? x402_js_1.PRICE_CREATE_PROJECT;
             if (cfg.treasuryAddress) {
                 await walletClient.writeContract({
@@ -258,7 +298,11 @@ function projectsRouter(cfg) {
             const payerAddress = (0, x402_js_1.getPayerAddress)(req);
             const paymentAmount = (0, x402_js_1.getPaymentAmount)(req);
             const { client: walletClient, address: walletAddress } = (0, clients_js_1.buildWalletClient)(cfg, (0, clients_js_1.normalizePrivateKey)(cfg.serverWalletKey));
-            // Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
+            // Step 1: Execute EIP-3009 USDC transfer → moves funds into Treasury
+            if (cfg.usdcAddress && cfg.treasuryAddress) {
+                await executeUsdcTransfer(req, walletClient, cfg.usdcAddress);
+            }
+            // Step 2: Settle X402 USDC payment → Treasury splits: arweaveCost + 20% markup
             const settleAmountVersion = paymentAmount ?? x402_js_1.PRICE_PUSH_VERSION;
             if (cfg.treasuryAddress) {
                 // Calculate arweave cost portion from content size (best-effort)

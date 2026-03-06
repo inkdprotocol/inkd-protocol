@@ -22,6 +22,7 @@ export interface ApiConfig {
     serverWalletKey: string | null;
     serverWalletAddress: Address | null;
     treasuryAddress: Address | null;
+    usdcAddress: Address;
     x402FacilitatorUrl: string;
     x402Enabled: boolean;
     cdpApiKeyId: string | null;
