@@ -102,3 +102,31 @@ sdk/src/hooks/
 # Old markdown docs (superseded by Mintlify .mdx)
 docs/*.md
 docs/mint.json
+
+# TypeScript build artifacts in source dirs (not in dist/)
+**/*.js.map
+sdk/src/**/*.js
+sdk/src/**/*.d.ts
+sdk/vitest.config.js
+sdk/vitest.config.d.ts
+cli/src/**/*.js
+cli/src/**/*.d.ts
+cli/vitest.config.js
+cli/vitest.config.d.ts
+api/src/**/*.js
+api/src/**/*.d.ts
+api/vitest.config.js
+api/vitest.config.d.ts
+api/examples/**/*.js
+api/examples/**/*.d.ts
+mcp/src/**/*.js
+mcp/src/**/*.d.ts
+mcp/dist/
+agentkit/src/**/*.js
+agentkit/src/**/*.d.ts
+subgraph/src/**/*.js
+subgraph/src/**/*.d.ts
+examples/**/*.js
+examples/**/*.d.ts
+scripts/*.js
+scripts/*.d.ts
