@@ -42,6 +42,7 @@ const x402_js_1 = require("./middleware/x402.js");
 const health_js_1 = require("./routes/health.js");
 const projects_js_1 = require("./routes/projects.js");
 const agents_js_1 = require("./routes/agents.js");
+const upload_js_1 = require("./routes/upload.js");
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 const cfg = (0, config_js_1.loadConfig)();
 const app = (0, express_1.default)();
@@ -83,6 +84,7 @@ else {
 // ─── API routes ───────────────────────────────────────────────────────────────
 app.use('/v1/projects', (0, projects_js_1.projectsRouter)(cfg));
 app.use('/v1/agents', (0, agents_js_1.agentsRouter)(cfg));
+app.use('/v1/upload', (0, upload_js_1.buildUploadRouter)(cfg)); // Arweave upload (free, no x402)
 // ─── Root redirect ────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
     res.json({

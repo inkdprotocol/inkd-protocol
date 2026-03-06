@@ -38,6 +38,7 @@ import { buildX402Middleware } from './middleware/x402.js'
 import { healthRouter }   from './routes/health.js'
 import { projectsRouter } from './routes/projects.js'
 import { agentsRouter }   from './routes/agents.js'
+import { buildUploadRouter } from './routes/upload.js'
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ if (cfg.x402Enabled && cfg.treasuryAddress) {
 
 app.use('/v1/projects', projectsRouter(cfg))
 app.use('/v1/agents',   agentsRouter(cfg))
+app.use('/v1/upload',   buildUploadRouter(cfg))   // Arweave upload (free, no x402)
 
 // ─── Root redirect ────────────────────────────────────────────────────────────
 

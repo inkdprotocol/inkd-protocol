@@ -1,20 +1,28 @@
 /**
- * inkd version <sub-command> — version management
+ * inkd version <sub-command> — version management (x402 payment flow)
  *
  * Sub-commands:
- *   push  — push a new version to a project
+ *   push  — upload content to Arweave + push version on-chain ($2 USDC via x402)
  *   list  — list all versions for a project
  *   show  — show a specific version by index
  */
 
-import { formatEther } from 'viem'
+import { readFileSync, statSync, existsSync } from 'fs'
+import { createWalletClient, createPublicClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { base, baseSepolia }   from 'viem/chains'
+import { ProjectsClient }      from '@inkd/sdk'
 import {
-  loadConfig, ADDRESSES,
+  loadConfig, requirePrivateKey, ADDRESSES,
   error, success, info,
   BOLD, RESET, CYAN, DIM, GREEN,
 } from '../config.js'
-import { buildClients, buildPublicClient } from '../client.js'
-import { REGISTRY_ABI } from '../abi.js'
+import { buildPublicClient } from '../client.js'
+import { REGISTRY_ABI }      from '../abi.js'
+
+const API_URL = process.env['INKD_API_URL'] ?? 'https://api.inkdprotocol.com'
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseFlag(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag)
@@ -31,87 +39,120 @@ function formatDate(ts: bigint): string {
   return new Date(Number(ts) * 1000).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 }
 
+function buildPayingClients(cfg: ReturnType<typeof loadConfig>) {
+  const key     = requirePrivateKey(cfg)
+  const account = privateKeyToAccount(key)
+  const chain   = cfg.network === 'mainnet' ? base : baseSepolia
+  const rpcUrl  = cfg.rpcUrl ?? (cfg.network === 'mainnet' ? 'https://mainnet.base.org' : 'https://sepolia.base.org')
+  const wallet  = createWalletClient({ account, chain, transport: http(rpcUrl) })
+  const reader  = createPublicClient({ chain, transport: http(rpcUrl) })
+  return { wallet, reader, account }
+}
+
 // ─── push ────────────────────────────────────────────────────────────────────
 
 export async function cmdVersionPush(args: string[]): Promise<void> {
-  const idStr      = requireFlag(args, '--id',        'inkd version push --id 1 --hash abc123 --tag v0.2.0')
-  const arweaveHash = requireFlag(args, '--hash',     'inkd version push --id 1 --hash abc123 --tag v0.2.0')
-  const versionTag  = requireFlag(args, '--tag',      'inkd version push --id 1 --hash abc123 --tag v0.2.0')
-  const changelog   = parseFlag(args, '--changelog') ?? ''
+  const idStr   = requireFlag(args, '--id',  'inkd version push --id 1 --file ./dist.tar.gz --tag v1.0.0')
+  const vTag    = requireFlag(args, '--tag', 'inkd version push --id 1 --file ./dist.tar.gz --tag v1.0.0')
 
-  const cfg   = loadConfig()
-  const addrs = ADDRESSES[cfg.network]
-  if (!addrs.registry) error('Registry address not configured. Deploy contracts first.')
+  // Accepts either --file (uploads to Arweave) or --hash (pre-uploaded)
+  const filePath  = parseFlag(args, '--file')
+  const arHash    = parseFlag(args, '--hash')
 
-  const { publicClient, walletClient, account, addrs: a } = buildClients(cfg)
-
-  const versionFee = await publicClient.readContract({
-    address: a.registry,
-    abi: REGISTRY_ABI,
-    functionName: 'versionFee',
-  }) as bigint
-
-  info(`Version fee: ${formatEther(versionFee)} ETH`)
-  info(`Pushing version ${CYAN}${versionTag}${RESET} to project #${idStr}...`)
-
-  const tx = await walletClient.writeContract({
-    address: a.registry,
-    abi: REGISTRY_ABI,
-    functionName: 'pushVersion',
-    args: [BigInt(idStr), arweaveHash, versionTag, changelog],
-    value: versionFee,
-    account,
-    chain: walletClient.chain!,
-  })
-
-  info(`Tx: ${DIM}${tx}${RESET}`)
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: tx })
-
-  if (receipt.status === 'success') {
-    success(`Version ${BOLD}${versionTag}${RESET} pushed! Arweave: ${DIM}${arweaveHash}${RESET}`)
-  } else {
-    error('Transaction reverted. Verify project ownership and ETH balance.')
+  if (!filePath && !arHash) {
+    error(
+      'Provide either:\n' +
+      '  --file <path>   Upload file to Arweave, then push\n' +
+      '  --hash <ar://…> Use existing Arweave hash'
+    )
   }
+
+  const cfg = loadConfig()
+  const { wallet, reader } = buildPayingClients(cfg)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = new ProjectsClient({ wallet: wallet as any, publicClient: reader as any, apiUrl: API_URL })
+
+  let contentHash: string
+  let contentSize = 0
+
+  if (filePath) {
+    if (!existsSync(filePath)) error(`File not found: ${filePath}`)
+    const data = readFileSync(filePath)
+    contentSize = data.length
+
+    // Detect content type from extension
+    const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
+    const contentType = {
+      json: 'application/json', ts: 'text/plain', js: 'text/javascript',
+      md: 'text/markdown', txt: 'text/plain',
+    }[ext] ?? 'application/octet-stream'
+
+    info(`Uploading ${CYAN}${filePath}${RESET} to Arweave (${(contentSize / 1024).toFixed(1)} KB)...`)
+
+    let upload: Awaited<ReturnType<typeof client.upload>>
+    try {
+      upload = await client.upload(data, {
+        contentType,
+        filename: filePath.split('/').pop(),
+      })
+    } catch (err) {
+      error(`Upload failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+
+    contentHash = upload!.hash
+    info(`  Uploaded → ${DIM}${upload!.url}${RESET}`)
+    info(`  Hash: ${CYAN}${contentHash}${RESET}`)
+
+  } else {
+    contentHash = arHash!
+    if (!contentHash.startsWith('ar://') && !contentHash.startsWith('0x')) {
+      error('--hash must be an Arweave TxId (ar://...) or hash')
+    }
+  }
+
+  info(`Pushing version ${CYAN}${vTag}${RESET} to project #${idStr}...`)
+  info(`  Paying $2.00 USDC from ${DIM}${wallet.account.address}${RESET}`)
+
+  let result: Awaited<ReturnType<typeof client.pushVersion>>
+  try {
+    result = await client.pushVersion(parseInt(idStr, 10), {
+      tag: vTag, contentHash, contentSize,
+    })
+  } catch (err) {
+    error(err instanceof Error ? err.message : String(err))
+  }
+
+  success(`Version ${BOLD}${vTag}${RESET} pushed!`)
+  info(`  Content hash: ${DIM}${result!.contentHash}${RESET}`)
+  info(`  TX:           ${DIM}${result!.txHash}${RESET}`)
+  info(`  Basescan:     https://basescan.org/tx/${result!.txHash}`)
+  console.log()
 }
 
 // ─── list ────────────────────────────────────────────────────────────────────
 
 export async function cmdVersionList(args: string[]): Promise<void> {
-  const idStr = args[0]
-    ?? requireFlag(args, '--id', 'inkd version list 42')
+  const idStr = args[0] ?? requireFlag(args, '--id', 'inkd version list 42')
   const id = BigInt(idStr.startsWith('--') ? requireFlag(args, '--id', 'inkd version list --id 42') : idStr)
 
   const cfg   = loadConfig()
   const addrs = ADDRESSES[cfg.network]
   if (!addrs.registry) error('Registry address not configured.')
 
-  const client = buildPublicClient(cfg)
-
+  const client       = buildPublicClient(cfg)
   const versionCount = await client.readContract({
-    address: addrs.registry,
-    abi: REGISTRY_ABI,
-    functionName: 'getVersionCount',
-    args: [id],
+    address: addrs.registry, abi: REGISTRY_ABI, functionName: 'getVersionCount', args: [id],
   }) as bigint
 
-  if (versionCount === 0n) {
-    info(`No versions found for project #${id}`)
-    return
-  }
+  if (versionCount === 0n) { info(`No versions found for project #${id}`); return }
 
   const versions = await Promise.all(
     Array.from({ length: Number(versionCount) }, (_, i) =>
       client.readContract({
-        address: addrs.registry,
-        abi: REGISTRY_ABI,
-        functionName: 'getVersion',
-        args: [id, BigInt(i)],
+        address: addrs.registry, abi: REGISTRY_ABI, functionName: 'getVersion', args: [id, BigInt(i)],
       })
     )
-  ) as Array<{
-    projectId: bigint; arweaveHash: string; versionTag: string
-    changelog: string; pushedBy: string; pushedAt: bigint
-  }>
+  ) as unknown as Array<{ projectId: bigint; contentHash: string; arweaveHash?: string; tag: string; versionTag?: string; pushedBy: string; pushedAt: bigint }>
 
   console.log()
   console.log(`  ${BOLD}Versions for Project #${id}${RESET} (${versionCount} total)`)
@@ -119,14 +160,13 @@ export async function cmdVersionList(args: string[]): Promise<void> {
 
   for (let i = versions.length - 1; i >= 0; i--) {
     const v = versions[i]!
+    const hash = v.contentHash ?? (v as Record<string, unknown>)['arweaveHash'] as string ?? ''
+    const tag  = v.tag ?? (v as Record<string, unknown>)['versionTag'] as string ?? ''
     console.log(
-      `  ${DIM}#${i}${RESET}  ${CYAN}${v.versionTag.padEnd(12)}${RESET}` +
-      `  ${DIM}${v.arweaveHash.slice(0, 12)}…${RESET}` +
+      `  ${DIM}#${i}${RESET}  ${CYAN}${tag.padEnd(12)}${RESET}` +
+      `  ${DIM}${hash.replace('ar://', '').slice(0, 12)}…${RESET}` +
       `  ${GREEN}${formatDate(v.pushedAt)}${RESET}`
     )
-    if (v.changelog) {
-      console.log(`       ${DIM}${v.changelog.slice(0, 72)}${v.changelog.length > 72 ? '…' : ''}${RESET}`)
-    }
   }
   console.log()
 }
@@ -134,7 +174,7 @@ export async function cmdVersionList(args: string[]): Promise<void> {
 // ─── show ────────────────────────────────────────────────────────────────────
 
 export async function cmdVersionShow(args: string[]): Promise<void> {
-  const idStr    = requireFlag(args, '--id',  'inkd version show --id 42 --index 0')
+  const idStr    = requireFlag(args, '--id',    'inkd version show --id 42 --index 0')
   const indexStr = requireFlag(args, '--index', 'inkd version show --id 42 --index 0')
 
   const cfg   = loadConfig()
@@ -143,24 +183,22 @@ export async function cmdVersionShow(args: string[]): Promise<void> {
 
   const client  = buildPublicClient(cfg)
   const version = await client.readContract({
-    address: addrs.registry,
-    abi: REGISTRY_ABI,
-    functionName: 'getVersion',
+    address: addrs.registry, abi: REGISTRY_ABI, functionName: 'getVersion',
     args: [BigInt(idStr), BigInt(indexStr)],
-  }) as {
-    projectId: bigint; arweaveHash: string; versionTag: string
-    changelog: string; pushedBy: string; pushedAt: bigint
-  }
+  }) as Record<string, unknown>
+
+  const hash = version['contentHash'] as string ?? version['arweaveHash'] as string ?? ''
+  const tag  = version['tag'] as string ?? version['versionTag'] as string ?? ''
 
   console.log()
   console.log(`  ${BOLD}Version #${indexStr} of Project #${idStr}${RESET}`)
   console.log(`  ${'─'.repeat(42)}`)
-  info(`Tag:           ${CYAN}${version.versionTag}${RESET}`)
-  info(`Arweave hash:  ${version.arweaveHash}`)
-  info(`Pushed by:     ${version.pushedBy}`)
-  info(`Pushed at:     ${GREEN}${formatDate(version.pushedAt)}${RESET}`)
-  if (version.changelog) {
-    info(`Changelog:     ${version.changelog}`)
+  info(`Tag:           ${CYAN}${tag}${RESET}`)
+  info(`Content hash:  ${hash}`)
+  if (hash.startsWith('ar://') || hash.length === 43) {
+    info(`Arweave URL:   https://arweave.net/${hash.replace('ar://', '')}`)
   }
+  info(`Pushed by:     ${version['pushedBy'] as string}`)
+  info(`Pushed at:     ${GREEN}${formatDate(version['pushedAt'] as bigint)}${RESET}`)
   console.log()
 }

@@ -1,22 +1,26 @@
 /**
- * inkd project <sub-command> — project management
+ * inkd project <sub-command> — project management (x402 payment flow)
  *
  * Sub-commands:
- *   create   — register a new project (locks 1 $INKD)
+ *   create   — register a new project ($5 USDC via x402)
  *   get      — fetch project details by ID
  *   list     — list projects owned by an address
- *   transfer — transfer ownership to a new address
- *   collab   — add/remove collaborators
  */
 
-import { formatEther, parseEther, isAddress, type Address } from 'viem'
+import { isAddress, createWalletClient, createPublicClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { base, baseSepolia }   from 'viem/chains'
+import { ProjectsClient }      from '@inkd/sdk'
 import {
-  loadConfig, requirePrivateKey, ADDRESSES,
+  loadConfig, requirePrivateKey,
   error, success, info, warn,
   BOLD, RESET, CYAN, DIM, GREEN, YELLOW,
 } from '../config.js'
-import { buildClients, buildPublicClient } from '../client.js'
-import { REGISTRY_ABI, TOKEN_ABI } from '../abi.js'
+import { buildPublicClient } from '../client.js'
+import { REGISTRY_ABI } from '../abi.js'
+import { ADDRESSES } from '../config.js'
+
+const API_URL = process.env['INKD_API_URL'] ?? 'https://api.inkdprotocol.com'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,86 +35,78 @@ function requireFlag(args: string[], flag: string, hint: string): string {
   return val!
 }
 
-function formatDate(ts: bigint): string {
+function formatDate(ts: number | bigint): string {
   return new Date(Number(ts) * 1000).toISOString().slice(0, 10)
+}
+
+function buildPayingClients(cfg: ReturnType<typeof loadConfig>) {
+  const key     = requirePrivateKey(cfg)
+  const account = privateKeyToAccount(key)
+  const chain   = cfg.network === 'mainnet' ? base : baseSepolia
+  const rpcUrl  = cfg.rpcUrl ?? (cfg.network === 'mainnet' ? 'https://mainnet.base.org' : 'https://sepolia.base.org')
+
+  const wallet = createWalletClient({ account, chain, transport: http(rpcUrl) })
+  const reader = createPublicClient({ chain, transport: http(rpcUrl) })
+
+  return { wallet, reader, account }
 }
 
 // ─── create ──────────────────────────────────────────────────────────────────
 
 export async function cmdProjectCreate(args: string[]): Promise<void> {
-  const name         = requireFlag(args, '--name',        'inkd project create --name my-agent')
-  const description  = parseFlag(args, '--description') ?? ''
-  const license      = parseFlag(args, '--license')     ?? 'MIT'
-  const readmeHash   = parseFlag(args, '--readme')      ?? ''
-  const agentEndpoint = parseFlag(args, '--endpoint')   ?? ''
-  const isPublic     = !args.includes('--private')
-  const isAgent      = args.includes('--agent')
+  const name          = requireFlag(args, '--name',        'inkd project create --name my-agent')
+  const description   = parseFlag(args, '--description') ?? ''
+  const license       = parseFlag(args, '--license')     ?? 'MIT'
+  const readmeHash    = parseFlag(args, '--readme')      ?? ''
+  const agentEndpoint = parseFlag(args, '--endpoint')    ?? ''
+  const isPublic      = !args.includes('--private')
+  const isAgent       = args.includes('--agent')
 
-  const cfg    = loadConfig()
-  const addrs  = ADDRESSES[cfg.network]
-  if (!addrs.registry) error('Registry address not configured. Deploy contracts first.')
+  const cfg = loadConfig()
+  const { wallet, reader } = buildPayingClients(cfg)
 
-  const { publicClient, walletClient, account, addrs: a } = buildClients(cfg)
+  info(`Creating project ${CYAN}${name}${RESET} via x402...`)
+  info(`  Paying $5.00 USDC from ${DIM}${wallet.account.address}${RESET}`)
 
-  // Check/approve token allowance
-  const allowance = await publicClient.readContract({
-    address: a.token,
-    abi: TOKEN_ABI,
-    functionName: 'allowance',
-    args: [account.address, a.registry],
-  }) as bigint
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = new ProjectsClient({ wallet: wallet as any, publicClient: reader as any, apiUrl: API_URL })
 
-  if (allowance < parseEther('1')) {
-    info('Approving 1 $INKD for registry...')
-    const approveTx = await walletClient.writeContract({
-      address: a.token, abi: TOKEN_ABI, functionName: 'approve',
-      args: [a.registry, parseEther('1')],
-      account, chain: walletClient.chain!,
+  let result: Awaited<ReturnType<typeof client.createProject>>
+  try {
+    result = await client.createProject({
+      name, description, license, isPublic, readmeHash, isAgent, agentEndpoint,
     })
-    info(`Approve tx: ${DIM}${approveTx}${RESET}`)
-    await publicClient.waitForTransactionReceipt({ hash: approveTx })
+  } catch (err) {
+    error(err instanceof Error ? err.message : String(err))
   }
 
-  info(`Creating project ${CYAN}${name}${RESET}...`)
-
-  const tx = await walletClient.writeContract({
-    address: a.registry,
-    abi: REGISTRY_ABI,
-    functionName: 'createProject',
-    args: [name, description, license, isPublic, readmeHash, isAgent, agentEndpoint],
-    account,
-    chain: walletClient.chain!,
-  })
-
-  info(`Tx: ${DIM}${tx}${RESET}`)
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: tx })
-
-  if (receipt.status === 'success') {
-    success(`Project ${BOLD}${name}${RESET} created! (block ${receipt.blockNumber})`)
-  } else {
-    error('Transaction reverted. Check name uniqueness and token balance.')
-  }
+  success(`Project ${BOLD}${name}${RESET} created!`)
+  info(`  Project ID: ${CYAN}${result!.projectId}${RESET}`)
+  info(`  Owner:      ${result!.owner}`)
+  info(`  TX:         ${DIM}${result!.txHash}${RESET}`)
+  info(`  Basescan:   https://basescan.org/tx/${result!.txHash}`)
+  console.log()
 }
 
 // ─── get ─────────────────────────────────────────────────────────────────────
 
 export async function cmdProjectGet(args: string[]): Promise<void> {
   const idStr = args[0] ?? requireFlag(args, '--id', 'inkd project get 42')
-  const id    = BigInt(idStr.startsWith('--') ? requireFlag(args, '--id', 'inkd project get --id 42') : idStr)
+  const id    = parseInt(idStr.startsWith('--') ? requireFlag(args, '--id', 'inkd project get --id 42') : idStr, 10)
 
-  const cfg   = loadConfig()
-  const addrs = ADDRESSES[cfg.network]
-  if (!addrs.registry) error('Registry address not configured.')
+  const cfg    = loadConfig()
+  const addrs  = ADDRESSES[cfg.network]
+  if (!addrs.registry) error('Registry address not configured. Deploy contracts first.')
 
-  const client = buildPublicClient(cfg)
-  const project = await client.readContract({
+  const client   = buildPublicClient(cfg)
+  const project  = await client.readContract({
     address: addrs.registry,
     abi: REGISTRY_ABI,
     functionName: 'getProject',
-    args: [id],
+    args: [BigInt(id)],
   }) as {
     id: bigint; name: string; description: string; license: string
-    readmeHash: string; owner: Address; isPublic: boolean; isAgent: boolean
+    readmeHash: string; owner: string; isPublic: boolean; isAgent: boolean
     agentEndpoint: string; createdAt: bigint; versionCount: bigint; exists: boolean
   }
 
@@ -120,8 +116,8 @@ export async function cmdProjectGet(args: string[]): Promise<void> {
     address: addrs.registry,
     abi: REGISTRY_ABI,
     functionName: 'getCollaborators',
-    args: [id],
-  }) as Address[]
+    args: [BigInt(id)],
+  }) as string[]
 
   console.log()
   console.log(`  ${BOLD}Project #${project.id}${RESET}  ${project.isAgent ? CYAN + '[agent]' + RESET : ''}`)
@@ -151,32 +147,24 @@ export async function cmdProjectList(args: string[]): Promise<void> {
   const addrs = ADDRESSES[cfg.network]
   if (!addrs.registry) error('Registry address not configured.')
 
-  const client   = buildPublicClient(cfg)
+  const client     = buildPublicClient(cfg)
   const projectIds = await client.readContract({
     address: addrs.registry,
     abi: REGISTRY_ABI,
     functionName: 'getOwnerProjects',
-    args: [addressArg as Address],
+    args: [addressArg as `0x${string}`],
   }) as bigint[]
 
-  if (!projectIds.length) {
-    info(`No projects found for ${addressArg}`)
-    return
-  }
+  if (!projectIds.length) { info(`No projects found for ${addressArg}`); return }
 
   console.log()
   console.log(`  ${BOLD}Projects owned by ${DIM}${addressArg}${RESET}`)
   console.log(`  ${'─'.repeat(50)}`)
 
   const projects = await Promise.all(
-    projectIds.map(id =>
-      client.readContract({
-        address: addrs.registry,
-        abi: REGISTRY_ABI,
-        functionName: 'getProject',
-        args: [id],
-      })
-    )
+    projectIds.map(id => client.readContract({
+      address: addrs.registry, abi: REGISTRY_ABI, functionName: 'getProject', args: [id],
+    }))
   ) as Array<{ id: bigint; name: string; isAgent: boolean; isPublic: boolean; versionCount: bigint; createdAt: bigint }>
 
   for (const p of projects) {
@@ -190,72 +178,4 @@ export async function cmdProjectList(args: string[]): Promise<void> {
     )
   }
   console.log()
-}
-
-// ─── transfer ────────────────────────────────────────────────────────────────
-
-export async function cmdProjectTransfer(args: string[]): Promise<void> {
-  const idStr   = requireFlag(args, '--id',    'inkd project transfer --id 42 --to 0x...')
-  const toAddr  = requireFlag(args, '--to',    'inkd project transfer --id 42 --to 0x...')
-  if (!isAddress(toAddr)) error('--to must be a valid Ethereum address.')
-
-  const cfg   = loadConfig()
-  const addrs = ADDRESSES[cfg.network]
-  if (!addrs.registry) error('Registry address not configured.')
-
-  const { publicClient, walletClient, account, addrs: a } = buildClients(cfg)
-
-  const transferFee = await publicClient.readContract({
-    address: a.registry, abi: REGISTRY_ABI, functionName: 'serviceFee',
-  }) as bigint
-
-  info(`Transfer fee: ${formatEther(transferFee)} ETH`)
-  info(`Transferring project #${idStr} → ${toAddr}...`)
-
-  const tx = await walletClient.writeContract({
-    address: a.registry,
-    abi: REGISTRY_ABI,
-    functionName: 'transferProject',
-    args: [BigInt(idStr), toAddr as Address],
-    value: transferFee,
-    account,
-    chain: walletClient.chain!,
-  })
-
-  await publicClient.waitForTransactionReceipt({ hash: tx })
-  success(`Project #${idStr} transferred to ${toAddr}`)
-}
-
-// ─── collab ──────────────────────────────────────────────────────────────────
-
-export async function cmdProjectCollab(args: string[]): Promise<void> {
-  const action = args[0]
-  if (action !== 'add' && action !== 'remove') {
-    error('Usage: inkd project collab add|remove --id <id> --address <address>')
-  }
-
-  const idStr   = requireFlag(args, '--id',      `inkd project collab ${action} --id 42 --address 0x...`)
-  const collab  = requireFlag(args, '--address', `inkd project collab ${action} --id 42 --address 0x...`)
-  if (!isAddress(collab)) error('--address must be a valid Ethereum address.')
-
-  const cfg   = loadConfig()
-  const addrs = ADDRESSES[cfg.network]
-  if (!addrs.registry) error('Registry address not configured.')
-
-  const { publicClient, walletClient, account, addrs: a } = buildClients(cfg)
-  const fn = action === 'add' ? 'addCollaborator' : 'removeCollaborator'
-
-  info(`${action === 'add' ? 'Adding' : 'Removing'} collaborator ${collab}...`)
-
-  const tx = await walletClient.writeContract({
-    address: a.registry,
-    abi: REGISTRY_ABI,
-    functionName: fn,
-    args: [BigInt(idStr), collab as Address],
-    account,
-    chain: walletClient.chain!,
-  })
-
-  await publicClient.waitForTransactionReceipt({ hash: tx })
-  success(`Collaborator ${action === 'add' ? 'added' : 'removed'}.`)
 }
