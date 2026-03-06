@@ -281,13 +281,15 @@ export function projectsRouter(cfg: ApiConfig): Router {
       // Step 2: Settle X402 USDC payment → splits revenue (arweaveCost = 0 for createProject)
       const settleAmountCreate = paymentAmount ?? PRICE_CREATE_PROJECT
       if (cfg.treasuryAddress) {
-        await walletClient.writeContract({
+        const settleHash = await walletClient.writeContract({
           address:      cfg.treasuryAddress,
           abi:          TREASURY_ABI,
           functionName: 'settle',
           nonce:        nextNonce,
           args:         [settleAmountCreate, 0n],
         })
+        // Wait for settle to confirm before using next nonce — prevents "replacement tx underpriced"
+        await publicClient.waitForTransactionReceipt({ hash: settleHash, pollingInterval: 500 })
         if (nextNonce !== undefined) nextNonce++
       }
 
@@ -395,13 +397,15 @@ export function projectsRouter(cfg: ApiConfig): Router {
             arweaveCost = await getArweaveCostUsdc(contentSize)
           } catch { /* use 0 if price fetch fails */ }
         }
-        await walletClient.writeContract({
+        const settleHashV = await walletClient.writeContract({
           address:      cfg.treasuryAddress,
           abi:          TREASURY_ABI,
           functionName: 'settle',
           nonce:        nextNonceV,
           args:         [settleAmountVersion, arweaveCost],
         })
+        // Wait for settle to confirm before using next nonce — prevents "replacement tx underpriced"
+        await publicClient.waitForTransactionReceipt({ hash: settleHashV, pollingInterval: 500 })
         if (nextNonceV !== undefined) nextNonceV++
       }
 
