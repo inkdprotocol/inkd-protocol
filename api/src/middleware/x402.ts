@@ -5,19 +5,19 @@
  *
  * Flow:
  *   1. Agent sends POST /v1/projects (no payment yet)
- *   2. Server returns 402 with payment details ($5 USDC → Treasury Contract)
+ *   2. Server returns 402 with payment details (amount → Treasury Contract)
  *   3. Agent auto-pays via @x402/fetch (EIP-3009 signed transfer)
  *   4. LocalFacilitator verifies the payment signature + amount
  *   5. Request proceeds — server calls Treasury.settle() to split revenue
  *   6. Registry transaction goes on-chain — payer address = owner
  *
  * Pricing:
- *   POST /v1/projects              → $5.00 USDC (create project)
- *   POST /v1/projects/:id/versions → $2.00 USDC (push version)
+ *   POST /v1/projects              → $0.10 USDC minimum (create project)
+ *   POST /v1/projects/:id/versions → arweaveCost × 1.20, min $0.10 (push version)
  *
  * Revenue split (handled by InkdTreasury.settle()):
- *   $1.00 → arweaveWallet   (Arweave storage)
- *   $2.00 → InkdBuyback     (auto-buys $INKD at $50 threshold)
+ *   arweaveCost → arweaveWallet (Arweave storage, forwarded to Irys)
+ *   10% markup  → InkdBuyback  (auto-buys $INKD at $50 threshold)
  *   $2.00 → Treasury        (protocol revenue)
  */
 
