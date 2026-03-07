@@ -3,8 +3,7 @@ import { defineConfig } from 'vocs'
 export default defineConfig({
   title: 'Inkd Protocol',
   description: 'On-chain project registry for AI agents and developers. Built on Base, stored on Arweave.',
-  logoUrl: '/logo.svg',
-  iconUrl: '/favicon.svg',
+  logoUrl: '/logo.jpg',
   baseUrl: 'https://docs.inkdprotocol.com',
   ogImageUrl: 'https://docs.inkdprotocol.com/og.png',
 
@@ -23,10 +22,6 @@ export default defineConfig({
     {
       icon: 'x',
       link: 'https://twitter.com/inkdprotocol',
-    },
-    {
-      icon: 'discord',
-      link: 'https://discord.gg/inkd',
     },
   ],
 
