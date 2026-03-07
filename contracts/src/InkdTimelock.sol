@@ -91,9 +91,11 @@ contract InkdTimelock {
 
         queuedTransactions[txHash] = false;
 
+        // slither-disable-next-line reentrancy-events
         (bool success, bytes memory returnData) = target.call{value: value}(data);
         require(success, "InkdTimelock: execution failed");
 
+        // Event must be emitted after external call — required for Timelock semantics
         emit ExecuteTransaction(txHash, target, value, data, eta);
         return returnData;
     }

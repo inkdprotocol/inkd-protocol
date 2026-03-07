@@ -221,4 +221,34 @@ contract InkdBuybackTest is Test {
         assertEq(buyback.totalInkdBought(), 0);
         assertEq(buyback.buybackCount(),    0);
     }
+
+    // ─── Slippage ────────────────────────────────────────────────────────────
+
+    function test_DefaultMaxSlippageBps() public view {
+        assertEq(buyback.maxSlippageBps(), 100); // 1% default
+    }
+
+    function test_SetMaxSlippageBps_Owner() public {
+        vm.prank(owner);
+        buyback.setMaxSlippageBps(500);
+        assertEq(buyback.maxSlippageBps(), 500);
+    }
+
+    function test_SetMaxSlippageBps_TooHigh_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(bytes("Max 10% slippage"));
+        buyback.setMaxSlippageBps(1001);
+    }
+
+    function test_SetMaxSlippageBps_Boundary_1000() public {
+        vm.prank(owner);
+        buyback.setMaxSlippageBps(1000); // 10% max allowed
+        assertEq(buyback.maxSlippageBps(), 1000);
+    }
+
+    function test_SetMaxSlippageBps_NonOwner_Reverts() public {
+        vm.prank(other);
+        vm.expectRevert();
+        buyback.setMaxSlippageBps(50);
+    }
 }

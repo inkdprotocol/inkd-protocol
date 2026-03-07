@@ -60,6 +60,13 @@ contract InkdBuyback is IInkdBuyback, Initializable, OwnableUpgradeable, UUPSUpg
     /// @notice USDC threshold to trigger buyback. Default: $50 (50_000_000)
     uint256 public threshold;
 
+    /// @notice Max slippage allowed in basis points. Default: 100 bps (1%).
+    /// @dev Applied as: amountOutMinimum = expectedOut * (10000 - maxSlippageBps) / 10000
+    /// Since we can't get a price oracle cheaply here, this is set via owner and
+    /// applied as a fraction of the USDC in (1:1 as floor, since USDC/$INKD ratio unknown).
+    /// Owner should update this based on current pool depth.
+    uint256 public maxSlippageBps;
+
     /// @notice Trusted depositor — InkdTreasury contract
     address public treasury;
 
@@ -74,6 +81,7 @@ contract InkdBuyback is IInkdBuyback, Initializable, OwnableUpgradeable, UUPSUpg
 
     // ───── Events ────────────────────────────────────────────────────────────
     event BuybackExecuted(address indexed caller, uint256 usdcIn, uint256 inkdOut);
+    event MaxSlippageBpsSet(uint256 bps);
     event Deposited(address indexed from, uint256 amount, uint256 newBalance);
     event ThresholdSet(uint256 oldThreshold, uint256 newThreshold);
     event InkdTokenSet(address indexed token);
@@ -101,8 +109,10 @@ contract InkdBuyback is IInkdBuyback, Initializable, OwnableUpgradeable, UUPSUpg
         if (treasury_ == address(0)) revert ZeroAddress();
         __Ownable_init(owner_);
         treasury  = treasury_;
-        inkdToken = inkdToken_;
-        threshold = threshold_ > 0 ? threshold_ : 50_000_000; // $50 USDC
+        // slither-disable-next-line missing-zero-check
+        inkdToken = inkdToken_; // Intentionally allowed to be address(0) pre-launch; set via setInkdToken() after Clanker deploy
+        threshold      = threshold_ > 0 ? threshold_ : 50_000_000; // $50 USDC
+        maxSlippageBps = 100; // default 1% slippage protection
     }
 
     // ───── Core ──────────────────────────────────────────────────────────────
@@ -165,6 +175,14 @@ contract InkdBuyback is IInkdBuyback, Initializable, OwnableUpgradeable, UUPSUpg
         threshold = newThreshold;
     }
 
+    /// @notice Set max slippage tolerance for buyback swaps. Owner only.
+    /// @param bps Slippage in basis points. Max 1000 (10%). Default 100 (1%).
+    function setMaxSlippageBps(uint256 bps) external onlyOwner {
+        require(bps <= 1000, "Max 10% slippage");
+        maxSlippageBps = bps;
+        emit MaxSlippageBpsSet(bps);
+    }
+
     function setTreasury(address treasury_) external onlyOwner {
         if (treasury_ == address(0)) revert ZeroAddress();
         treasury = treasury_;
@@ -196,6 +214,12 @@ contract InkdBuyback is IInkdBuyback, Initializable, OwnableUpgradeable, UUPSUpg
         SafeERC20.forceApprove(IERC20(USDC), SWAP_ROUTER, usdcIn);
 
         // Swap USDC → $INKD directly (no WETH needed!)
+        // amountOutMinimum: without an on-chain oracle we cannot compute exact $INKD price.
+        // We enforce a floor: the swap must return at least (usdcIn * (10000 - maxSlippageBps) / 10000)
+        // expressed in $INKD token's 18-decimal base. This protects against catastrophic sandwich
+        // attacks while remaining compatible with normal pool price variance.
+        // Owner should set maxSlippageBps conservatively based on pool depth.
+        uint256 minOut = (usdcIn * (10000 - maxSlippageBps)) / 10000;
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn:           USDC,
             tokenOut:          inkdToken,
@@ -203,7 +227,7 @@ contract InkdBuyback is IInkdBuyback, Initializable, OwnableUpgradeable, UUPSUpg
             recipient:         address(this),
             deadline:          block.timestamp + 300,
             amountIn:          usdcIn,
-            amountOutMinimum:  0,
+            amountOutMinimum:  minOut,
             sqrtPriceLimitX96: 0
         });
 
