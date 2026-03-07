@@ -64,7 +64,7 @@ jobs:
         run: cd contracts && forge test -v 2>&1 | tee gas-report.txt
 
       - name: Upload gas report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gas-report
           path: gas-report.txt
@@ -120,7 +120,7 @@ jobs:
         run: slither . --json slither-report.json || true
 
       - name: Upload Slither report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: slither-report
           path: slither-report.json
