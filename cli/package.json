@@ -1,7 +1,7 @@
 {
   "name": "@inkd/cli",
-  "version": "1.0.0",
-  "description": "CLI for the Inkd Protocol — register projects, push versions, and inspect the on-chain registry",
+  "version": "0.1.1",
+  "description": "TypeScript SDK for the Inkd Protocol — permanent on-chain project registry on Base. Lock 1 $INKD to register. Pay 0.001 ETH to push a version. Own your work forever.",
   "bin": {
     "inkd": "./dist/index.js"
   },
@@ -38,7 +38,7 @@
     "url": "https://github.com/inkdprotocol/inkd-protocol.git",
     "directory": "cli"
   },
-  "homepage": "https://inkdprotocol.xyz",
+  "homepage": "https://inkdprotocol.com",
   "bugs": {
     "url": "https://github.com/inkdprotocol/inkd-protocol/issues"
   },
