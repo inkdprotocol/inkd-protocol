@@ -172,6 +172,7 @@ contract InkdRegistryV2 is InkdRegistry {
 
     function setMetadataUri(uint256 projectId, string calldata uri) external {
         if (!projects[projectId].exists) revert ProjectNotFound();
+        // slither-disable-next-line timestamp
         if (projects[projectId].owner != msg.sender && !isCollaborator[projectId][msg.sender])
             revert NotOwnerOrCollaborator();
         projectMetadataUri[projectId] = uri;
@@ -180,6 +181,7 @@ contract InkdRegistryV2 is InkdRegistry {
 
     function setAccessManifest(uint256 projectId, string calldata manifestHash) external {
         if (!projects[projectId].exists) revert ProjectNotFound();
+        // slither-disable-next-line timestamp
         if (projects[projectId].owner != msg.sender && !isCollaborator[projectId][msg.sender])
             revert NotOwnerOrCollaborator();
         projectAccessManifest[projectId] = manifestHash;
@@ -188,6 +190,7 @@ contract InkdRegistryV2 is InkdRegistry {
 
     function setTagsHash(uint256 projectId, bytes32 hash_) external {
         if (!projects[projectId].exists) revert ProjectNotFound();
+        // slither-disable-next-line timestamp
         if (projects[projectId].owner != msg.sender && !isCollaborator[projectId][msg.sender])
             revert NotOwnerOrCollaborator();
         projectTagsHash[projectId] = hash_;
@@ -231,4 +234,8 @@ contract InkdRegistryV2 is InkdRegistry {
     function version() external pure override returns (string memory) {
         return "v2";
     }
+
+    /// @dev Storage gap for future V3 upgrades. V2 uses slots 10-17 (8 slots).
+    /// Adding 42 gap slots reserves space up to slot 59, allowing V3 to safely add state.
+    uint256[42] private __gap;
 }

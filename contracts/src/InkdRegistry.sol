@@ -139,6 +139,7 @@ contract InkdRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /// @notice Add a collaborator to a project. Owner only.
     function addCollaborator(uint256 projectId, address collaborator) external onlyProjectOwner(projectId) {
         if (collaborator == address(0)) revert ZeroAddress();
+        // slither-disable-next-line timestamp
         if (collaborator == projects[projectId].owner) revert CannotAddOwner();
         if (isCollaborator[projectId][collaborator]) revert AlreadyCollaborator();
 
