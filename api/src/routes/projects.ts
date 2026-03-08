@@ -18,6 +18,7 @@ import { getPayerAddress, getPaymentAmount } from '../middleware/x402.js'
 import { REGISTRY_ABI, TREASURY_ABI } from '../abis.js'
 import { getArweaveCostUsdc, calculateCharge } from '../arweave.js'
 import { sendError, NotFoundError, BadRequestError, ServiceUnavailableError } from '../errors.js'
+import { buildIndexerClient, type IndexerProject, type IndexerVersion } from '../indexer/client.js'
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -100,6 +101,25 @@ function serializeProject(p: RawProject, v2?: {
   }
 }
 
+function serializeIndexedProject(p: IndexerProject) {
+  return {
+    id:            p.id.toString(),
+    name:          p.name,
+    description:   p.description,
+    license:       p.license,
+    readmeHash:    p.readme_hash,
+    owner:         p.owner as Address,
+    isPublic:      !!p.is_public,
+    isAgent:       !!p.is_agent,
+    agentEndpoint: p.agent_endpoint,
+    createdAt:     p.created_at.toString(),
+    versionCount:  p.version_count.toString(),
+    metadataUri:   p.metadata_uri ?? '',
+    forkOf:        p.fork_of?.toString() ?? '0',
+    accessManifest: p.access_manifest ?? '',
+  }
+}
+
 function serializeVersion(v: RawVersion, index: number, agentAddress?: Address, metaHash?: string) {
   return {
     versionIndex: index.toString(),
@@ -109,9 +129,22 @@ function serializeVersion(v: RawVersion, index: number, agentAddress?: Address, 
     changelog:    v.changelog,
     pushedBy:     v.pushedBy,
     pushedAt:     v.pushedAt.toString(),
-    // V2 fields
     agentAddress: agentAddress ?? null,
     metaHash:     metaHash ?? '',
+  }
+}
+
+function serializeIndexedVersion(v: IndexerVersion) {
+  return {
+    versionIndex: v.version_index.toString(),
+    projectId:    v.project_id.toString(),
+    arweaveHash:  v.arweave_hash,
+    versionTag:   v.version_tag,
+    changelog:    v.changelog,
+    pushedBy:     v.pushed_by as Address,
+    pushedAt:     v.pushed_at.toString(),
+    agentAddress: v.agent_address,
+    metaHash:     v.meta_hash ?? '',
   }
 }
 
@@ -129,12 +162,19 @@ export function projectsRouter(cfg: ApiConfig): Router {
   }
 
   const publicClient = buildPublicClient(cfg)
+  const indexer      = cfg.indexerDbPath ? buildIndexerClient(cfg.indexerDbPath) : null
 
   // ── GET /v1/projects ────────────────────────────────────────────────────────
   router.get('/', async (req, res) => {
     try {
       const registryAddress = requireRegistry()
       const { offset, limit } = PaginationQuery.parse(req.query)
+
+      if (indexer) {
+        const totalIndexed = indexer.countProjects()
+        const rows = indexer.listProjects(offset, limit).map(serializeIndexedProject)
+        return res.json({ data: rows, total: totalIndexed.toString(), offset, limit })
+      }
 
       const total = await publicClient.readContract({
         address:      registryAddress,
@@ -191,6 +231,12 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const registryAddress = requireRegistry()
       const id = parseInt(req.params['id'] ?? '', 10)
       if (isNaN(id) || id < 1) throw new BadRequestError('Project id must be a positive integer')
+
+      if (indexer) {
+        const row = indexer.getProject(id)
+        if (!row) throw new NotFoundError(`Project #${id}`)
+        return res.json({ data: serializeIndexedProject(row) })
+      }
 
       const p = await publicClient.readContract({
         address:      registryAddress,
@@ -304,6 +350,20 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const { offset, limit } = PaginationQuery.parse(req.query)
 
       // Verify project exists
+      if (indexer) {
+        const projectRow = indexer.getProject(id)
+        if (!projectRow) throw new NotFoundError(`Project #${id}`)
+        const totalIndexed = indexer.countVersions(id)
+        const versions = indexer.listVersions(id, offset, limit).map(serializeIndexedVersion)
+        return res.json({
+          data:      versions,
+          total:     totalIndexed.toString(),
+          projectId: id.toString(),
+          offset,
+          limit,
+        })
+      }
+
       const p = await publicClient.readContract({
         address:      registryAddress,
         abi:          REGISTRY_ABI,
@@ -425,6 +485,12 @@ export function projectsRouter(cfg: ApiConfig): Router {
       sendError(res, err)
     }
   })
+
+  if (indexer) {
+    router.get('/health/indexer', (req, res) => {
+      res.json({ data: indexer.health() })
+    })
+  }
 
   return router
 }

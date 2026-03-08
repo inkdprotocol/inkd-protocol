@@ -35,6 +35,15 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "graphql-request": "^7.4.0",
+    "luxon": "^3.7.2",
     "twitter-api-v2": "^1.29.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/luxon": "^3.7.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

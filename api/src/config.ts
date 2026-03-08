@@ -4,6 +4,7 @@
  * All config is via environment variables. See api/.env.example for defaults.
  */
 
+import path from 'node:path'
 import type { Address, Chain } from 'viem'
 import { base, baseSepolia } from 'viem/chains'
 
@@ -52,6 +53,7 @@ export interface ApiConfig {
   cdpApiKeySecret: string | null
   // The Graph subgraph
   graphEndpoint: string | null
+  indexerDbPath: string | null
 }
 
 export function loadConfig(): ApiConfig {
@@ -88,6 +90,7 @@ export function loadConfig(): ApiConfig {
     cdpApiKeyId:     process.env['CDP_API_KEY_ID']     ?? null,
     cdpApiKeySecret: process.env['CDP_API_KEY_SECRET'] ?? null,
     graphEndpoint: process.env['GRAPH_ENDPOINT'] ?? 'https://api.studio.thegraph.com/query/1743853/inkd/v0.1.0',
+    indexerDbPath: process.env['INKD_INDEXER_DB'] ?? path.resolve(process.cwd(), '../data/indexer.db'),
   }
 }
 

@@ -158,6 +158,24 @@ Deployed on Base Mainnet. All verified on Basescan.
 
 ---
 
+## Indexer (Discovery DB)
+
+inkd ships with a first-party indexer that mirrors on-chain data into `data/indexer.db` for low-latency discovery.
+
+1. **Create the DB schema**
+   ```bash
+   sqlite3 data/indexer.db < scripts/indexer-schema.sql
+   ```
+2. **Sync from The Graph**
+   ```bash
+   npx ts-node scripts/indexer-sync.ts
+   ```
+   (add to cron: `*/2 * * * * cd /path/to/inkd && npx ts-node scripts/indexer-sync.ts`)
+3. **API config** — set `INKD_INDEXER_DB` (defaults to `../data/indexer.db`). When present, `/v1/projects*` serves from SQLite instantly and falls back to on-chain reads if missing.
+4. **Health check** — `GET /v1/projects/health/indexer` returns the last cursor + timestamps so you can alert if the worker lags.
+
+---
+
 ## Links
 
 - **Docs:** [inkdprotocol.com](https://inkdprotocol.com)
