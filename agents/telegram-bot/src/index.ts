@@ -6,7 +6,7 @@ import QRCode from 'qrcode'
 import { getProjectById, getVersion, listProjectsByOwner, listVersions } from './services/indexer'
 import type { IndexedProject, IndexedVersion } from './services/indexer'
 import { createChallenge, recoverWalletFromSignature } from './services/auth'
-import { beginTextUpload, handleUploadMessage } from './services/uploads'
+import { beginTextUpload, beginRepoUpload, handleUploadMessage } from './services/uploads'
 import { SqliteStorage } from './services/session'
 import { createWalletConnectSession, extractAddress } from './services/walletconnect'
 
@@ -18,7 +18,7 @@ if (!token) {
 }
 
 type UploadSession = {
-  type: 'text'
+  type: 'text' | 'repo'
   projectName?: string
 }
 
@@ -64,6 +64,14 @@ bot.command('upload_text', async ctx => {
     return
   }
   await beginTextUpload(ctx)
+})
+
+bot.command('upload_repo', async ctx => {
+  if (!ctx.session.wallet) {
+    await ctx.reply('Connect your wallet first with /start.')
+    return
+  }
+  await beginRepoUpload(ctx)
 })
 
 bot.on('message:text', async ctx => {
