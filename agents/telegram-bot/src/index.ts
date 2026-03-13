@@ -228,11 +228,10 @@ bot.callbackQuery('wallet_new', async ctx => {
       `🔐 *Private Key* (SAVE THIS, shown only once!):\n` +
       `\`${privateKey}\`\n\n` +
       `⚠️ This is your bot wallet. Fund it with ETH (for gas) and USDC (for uploads) on Base.\n\n` +
-      `💡 *Get USDC on Base:*\n` +
-      `• Bridge from Ethereum: bridge.base.org\n` +
-      `• Buy directly: coinbase.com → send to Base\n\n` +
-      `Minimum for uploads: ~$0.20 USDC\n\n` +
-      `Use /wallet to check your balance.`,
+      `💡 *Next steps:*\n` +
+      `• Fund this wallet with USDC on Base\n` +
+      `• Use /wallet to check your balance\n` +
+      `• Use /upload_text or /upload_repo to start`,
       { parse_mode: 'Markdown' }
     )
   } catch (err) {
