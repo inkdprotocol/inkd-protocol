@@ -12,15 +12,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@x402/evm": "^2.6.0",
+    "@x402/fetch": "^2.6.0",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
     "ethers": "^6.16.0",
-    "grammy": "^1.41.1"
+    "grammy": "^1.41.1",
+    "viem": "^2.47.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.3.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.5.4"
   }
 }

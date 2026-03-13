@@ -3,14 +3,22 @@ import { InlineKeyboard } from 'grammy'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { parseRepoInput, fetchRepoDefaultBranch, downloadRepoZip } from './github'
-import { getUploadPriceEstimate, type PriceEstimate } from './api'
-import { getWalletFromEncrypted } from './wallet'
-import { createProjectWithPayment, pushVersionWithPayment } from './x402'
+import { parseRepoInput, fetchRepoDefaultBranch, downloadRepoZip } from './github.js'
+import { getUploadPriceEstimate, type PriceEstimate } from './api.js'
+import { uploadToArweave, createProject, pushVersion } from './x402.js'
+
+// ─── Session Types ────────────────────────────────────────────────────────────
+
+interface PendingTextUpload {
+  content: string
+  size: number
+  price: PriceEstimate
+}
 
 interface TextUploadSession {
   type: 'text'
   projectName?: string
+  pending?: PendingTextUpload
 }
 
 interface PendingRepoUpload {
@@ -40,6 +48,8 @@ interface BotSession {
 
 type MyContext = Context & SessionFlavor<BotSession>
 
+// ─── Begin Upload Flows ───────────────────────────────────────────────────────
+
 export async function beginTextUpload(ctx: MyContext) {
   ctx.session.upload = { type: 'text' }
   await ctx.reply('Send me the project name for this upload:')
@@ -49,6 +59,8 @@ export async function beginRepoUpload(ctx: MyContext) {
   ctx.session.upload = { type: 'repo' }
   await ctx.reply('Send me the project name for this repo upload:')
 }
+
+// ─── Handle Upload Messages ───────────────────────────────────────────────────
 
 export async function handleUploadMessage(ctx: MyContext) {
   const upload = ctx.session.upload
@@ -60,6 +72,7 @@ export async function handleUploadMessage(ctx: MyContext) {
     return true
   }
 
+  // Step 1: Get project name
   if (!upload.projectName) {
     const text = ctx.message?.text?.trim()
     if (!text) {
@@ -75,70 +88,57 @@ export async function handleUploadMessage(ctx: MyContext) {
     return true
   }
 
+  // Text upload flow: collect content and show confirmation
   if (upload.type === 'text') {
     const content = ctx.message?.text
     if (!content) {
       await ctx.reply('Please send text content for the upload.')
       return true
     }
-    
+
     const contentBytes = Buffer.from(content, 'utf8')
     const size = contentBytes.length
-    
+
     try {
-      // Get price estimate
       const price = await getUploadPriceEstimate(size)
-      
-      // Show confirmation
+
+      // Store pending upload
+      upload.pending = {
+        content,
+        size,
+        price,
+      }
+
       const estimateLine = `Estimated cost: ${formatUsdc(price.total)} USDC (${price.totalUsd})`
+      const breakdownLine = `Includes ${formatUsdc(price.arweaveCost)} USDC storage + ${formatUsdc(price.markup)} USDC protocol fee.`
       const summary = [
         `📝 Text Upload`,
         `Project: ${upload.projectName}`,
         `Size: ${formatBytes(size)}`,
         estimateLine,
+        breakdownLine,
         '',
         'This will:',
         '1. Upload content to Arweave',
         '2. Create project on Inkd Registry',
-        '3. Deduct USDC from your wallet',
+        '3. Push version with content',
         '',
-        'Continue?'
+        'Continue?',
       ].join('\n')
-      
-      // For text uploads, we need a different confirmation flow
-      // For now, just proceed (can add confirmation later)
-      const statusMsg = await ctx.reply('⏳ Creating project on Inkd…')
-      
-      const wallet = getWalletFromEncrypted(ctx.session.encryptedKey)
-      
-      // Create project with x402 payment
-      // Note: The API handles Arweave upload internally when given content
-      const result = await createProjectWithPayment(wallet, {
-        name: upload.projectName,
-        description: `Text upload (${formatBytes(size)})`,
-        license: 'MIT',
-      })
-      
-      ctx.session.upload = undefined
-      
-      await ctx.api.editMessageText(
-        ctx.chat!.id,
-        statusMsg.message_id,
-        `✅ Project created!\n\n` +
-        `Project ID: #${result.projectId}\n` +
-        `Owner: ${result.owner}\n` +
-        `Tx: ${result.txHash}\n` +
-        `Block: ${result.blockNumber}\n\n` +
-        `Use /my_projects to view your projects.`
-      )
+
+      const keyboard = new InlineKeyboard()
+        .text('✅ Upload', 'text_confirm')
+        .text('✖️ Cancel', 'text_cancel')
+
+      await ctx.reply(summary, { reply_markup: keyboard })
     } catch (err) {
-      await ctx.reply(`Upload failed: ${(err as Error).message}`)
+      await ctx.reply(`Failed to get price estimate: ${(err as Error).message}`)
       ctx.session.upload = undefined
     }
     return true
   }
 
-  // Repo upload flow
+  // Repo upload flow: collect GitHub link
   const link = ctx.message?.text?.trim()
   if (!link) {
     await ctx.reply('Please send the GitHub repo link or owner/repo.')
@@ -185,7 +185,7 @@ export async function handleUploadMessage(ctx: MyContext) {
       estimateLine,
       breakdownLine,
       '',
-      'Upload with these details?'
+      'Upload with these details?',
     ].join('\n')
 
     const keyboard = new InlineKeyboard()
@@ -201,6 +201,105 @@ export async function handleUploadMessage(ctx: MyContext) {
   return true
 }
 
+// ─── Text Upload Handlers ─────────────────────────────────────────────────────
+
+export async function handleTextConfirm(ctx: MyContext) {
+  const upload = ctx.session.upload
+  if (!upload || upload.type !== 'text' || !upload.pending) {
+    await ctx.answerCallbackQuery({ text: 'No pending text upload.', show_alert: true })
+    return
+  }
+  await ctx.answerCallbackQuery()
+
+  const pending = upload.pending
+  const projectName = upload.projectName!
+  const encryptedKey = ctx.session.encryptedKey
+
+  if (!encryptedKey) {
+    upload.pending = undefined
+    ctx.session.upload = undefined
+    await ctx.reply('You need a bot-managed wallet for uploads. Use /start → "🆕 New Wallet".')
+    return
+  }
+
+  const statusMsg = await ctx.reply('⏳ Step 1/3: Uploading to Arweave…')
+
+  try {
+    // Step 1: Upload content to Arweave
+    const contentBuffer = Buffer.from(pending.content, 'utf8')
+    const arweaveResult = await uploadToArweave(contentBuffer, 'text/plain', `${projectName}.txt`)
+
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      statusMsg.message_id,
+      `✅ Step 1/3: Uploaded to Arweave\n` +
+        `   Hash: ${arweaveResult.hash}\n\n` +
+        `⏳ Step 2/3: Creating project…`
+    )
+
+    // Step 2: Create project with x402 payment
+    const projectResult = await createProject(encryptedKey, {
+      name: projectName,
+      description: `Text upload (${formatBytes(pending.size)})`,
+      license: 'MIT',
+    })
+
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      statusMsg.message_id,
+      `✅ Step 1/3: Uploaded to Arweave\n` +
+        `   Hash: ${arweaveResult.hash}\n\n` +
+        `✅ Step 2/3: Project created\n` +
+        `   ID: #${projectResult.projectId}\n\n` +
+        `⏳ Step 3/3: Pushing version…`
+    )
+
+    // Step 3: Push version with x402 payment
+    const versionResult = await pushVersion(encryptedKey, projectResult.projectId, {
+      arweaveHash: arweaveResult.hash,
+      versionTag: 'v1.0.0',
+      changelog: 'Initial upload',
+      contentSize: pending.size,
+    })
+
+    // Success
+    ctx.session.upload = undefined
+
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      statusMsg.message_id,
+      `✅ Upload Complete!\n\n` +
+        `📂 Project: ${projectName} (#${projectResult.projectId})\n` +
+        `📦 Version: ${versionResult.versionTag}\n\n` +
+        `🔗 Arweave: https://arweave.net/${arweaveResult.txId}\n` +
+        `🔗 Project Tx: ${projectResult.txHash}\n` +
+        `🔗 Version Tx: ${versionResult.txHash}\n\n` +
+        `Use /my_projects to view your projects.`
+    )
+  } catch (err) {
+    ctx.session.upload = undefined
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      statusMsg.message_id,
+      `❌ Upload failed: ${(err as Error).message}`
+    )
+  }
+}
+
+export async function handleTextCancel(ctx: MyContext) {
+  const upload = ctx.session.upload
+  if (!upload || upload.type !== 'text') {
+    await ctx.answerCallbackQuery({ text: 'Nothing to cancel.', show_alert: true })
+    return
+  }
+  await ctx.answerCallbackQuery()
+  upload.pending = undefined
+  ctx.session.upload = undefined
+  await ctx.reply('Upload cancelled.')
+}
+
+// ─── Repo Upload Handlers ─────────────────────────────────────────────────────
+
 export async function handleRepoConfirm(ctx: MyContext) {
   const upload = ctx.session.upload
   if (!upload || upload.type !== 'repo' || !upload.pending) {
@@ -210,39 +309,70 @@ export async function handleRepoConfirm(ctx: MyContext) {
   await ctx.answerCallbackQuery()
 
   const pending = upload.pending
-  const wallet = ctx.session.wallet
   const encryptedKey = ctx.session.encryptedKey
-  
-  if (!wallet || !encryptedKey) {
+
+  if (!encryptedKey) {
     cleanupPending(pending)
     upload.pending = undefined
+    ctx.session.upload = undefined
     await ctx.reply('You need a bot-managed wallet for uploads. Use /start → "🆕 New Wallet".')
     return
   }
 
-  const statusMsg = await ctx.reply('⏳ Creating project on Inkd…')
-  
+  const statusMsg = await ctx.reply('⏳ Step 1/3: Uploading to Arweave…')
+
   try {
-    const walletInstance = getWalletFromEncrypted(encryptedKey)
-    
-    // Create project with x402 payment
-    const result = await createProjectWithPayment(walletInstance, {
+    // Step 1: Upload ZIP to Arweave
+    const zipBuffer = fs.readFileSync(pending.filePath)
+    const arweaveResult = await uploadToArweave(zipBuffer, 'application/zip', pending.filename)
+
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      statusMsg.message_id,
+      `✅ Step 1/3: Uploaded to Arweave\n` +
+        `   Hash: ${arweaveResult.hash}\n\n` +
+        `⏳ Step 2/3: Creating project…`
+    )
+
+    // Step 2: Create project with x402 payment
+    const projectResult = await createProject(encryptedKey, {
       name: pending.projectName,
       description: `GitHub: ${pending.owner}/${pending.repo}@${pending.ref}`,
       license: 'MIT',
     })
-    
+
     await ctx.api.editMessageText(
       ctx.chat!.id,
       statusMsg.message_id,
-      `✅ Project created!\n\n` +
-      `Project ID: #${result.projectId}\n` +
-      `Owner: ${result.owner}\n` +
-      `Tx: ${result.txHash}\n` +
-      `Block: ${result.blockNumber}\n\n` +
-      `📦 Size: ${formatBytes(pending.size)}\n` +
-      `Cost: ${formatUsdc(pending.price.total)} USDC\n\n` +
-      `Use /my_projects to view your projects.`
+      `✅ Step 1/3: Uploaded to Arweave\n` +
+        `   Hash: ${arweaveResult.hash}\n\n` +
+        `✅ Step 2/3: Project created\n` +
+        `   ID: #${projectResult.projectId}\n\n` +
+        `⏳ Step 3/3: Pushing version…`
+    )
+
+    // Step 3: Push version with x402 payment
+    const versionResult = await pushVersion(encryptedKey, projectResult.projectId, {
+      arweaveHash: arweaveResult.hash,
+      versionTag: 'v1.0.0',
+      changelog: `Source: ${pending.owner}/${pending.repo}@${pending.ref}`,
+      contentSize: pending.size,
+    })
+
+    // Success
+    ctx.session.upload = undefined
+
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      statusMsg.message_id,
+      `✅ Upload Complete!\n\n` +
+        `📂 Project: ${pending.projectName} (#${projectResult.projectId})\n` +
+        `📦 Version: ${versionResult.versionTag}\n` +
+        `📁 Source: ${pending.owner}/${pending.repo}@${pending.ref}\n\n` +
+        `🔗 Arweave: https://arweave.net/${arweaveResult.txId}\n` +
+        `🔗 Project Tx: ${projectResult.txHash}\n` +
+        `🔗 Version Tx: ${versionResult.txHash}\n\n` +
+        `Use /my_projects to view your projects.`
     )
   } catch (err) {
     await ctx.api.editMessageText(
@@ -269,6 +399,8 @@ export async function handleRepoCancel(ctx: MyContext) {
   ctx.session.upload = undefined
   await ctx.reply('Upload cancelled.')
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatBytes(size: number) {
   if (size < 1024) return `${size} B`

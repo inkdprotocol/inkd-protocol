@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createChallenge, recoverWalletFromSignature } from './services/auth'
-import { beginTextUpload, beginRepoUpload, handleUploadMessage, handleRepoCancel, handleRepoConfirm } from './services/uploads'
+import { beginTextUpload, beginRepoUpload, handleUploadMessage, handleRepoCancel, handleRepoConfirm, handleTextConfirm, handleTextCancel } from './services/uploads'
 import { SqliteStorage } from './services/session'
 import { generateWallet, encryptPrivateKey, getWalletBalance } from './services/wallet'
 import { listProjectsByOwner, getProjectById, listVersions, getVersion, type ApiProject, type ApiVersion } from './services/api'
@@ -160,19 +160,10 @@ bot.callbackQuery('wallet_new', async ctx => {
     const { address, privateKey } = generateWallet()
     const encryptedKey = encryptPrivateKey(privateKey)
     
+    // grammY auto-saves session — no explicit sqliteStorage.write needed
     ctx.session.wallet = address
     ctx.session.encryptedKey = encryptedKey
     ctx.session.pendingChallenge = undefined
-    
-    // Update in storage explicitly
-    if (ctx.chat) {
-      const chatId = ctx.chat.id.toString()
-      const current = (await sqliteStorage.read(chatId)) ?? {}
-      current.wallet = address
-      current.encryptedKey = encryptedKey
-      current.pendingChallenge = undefined
-      await sqliteStorage.write(chatId, current)
-    }
     
     await ctx.reply(
       `🆕 *New Wallet Created*\n\n` +
@@ -202,6 +193,8 @@ bot.callbackQuery('wallet_connect', async ctx => {
 
 bot.callbackQuery('repo_confirm', handleRepoConfirm)
 bot.callbackQuery('repo_cancel', handleRepoCancel)
+bot.callbackQuery('text_confirm', handleTextConfirm)
+bot.callbackQuery('text_cancel', handleTextCancel)
 
 bot.callbackQuery(/^project:(\d+)$/, async ctx => {
   await ctx.answerCallbackQuery()
