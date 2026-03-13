@@ -106,7 +106,7 @@ export class LocalFacilitatorClient {
         return { isValid: false, invalidReason: 'missing_authorization_or_signature' }
       }
 
-      const { from, to, value, validAfter, validBefore } = auth
+      const { from, to, value, validAfter, validBefore, nonce } = auth
 
       // Check recipient is our Treasury
       if (to?.toLowerCase() !== this.treasuryAddress.toLowerCase()) {
@@ -129,7 +129,48 @@ export class LocalFacilitatorClient {
         return { isValid: false, invalidReason: 'expired' }
       }
 
-      // Signature present and authorization fields look valid
+      // Verify EIP-712 signature cryptographically
+      const chainId = this.network === 'mainnet' ? 8453 : 84532
+      try {
+        const recovered = await recoverTypedDataAddress({
+          domain: {
+            name:              'USD Coin',
+            version:           '2',
+            chainId,
+            verifyingContract: this.usdcAddress,
+          },
+          types: {
+            TransferWithAuthorization: [
+              { name: 'from',        type: 'address' },
+              { name: 'to',          type: 'address' },
+              { name: 'value',       type: 'uint256' },
+              { name: 'validAfter',  type: 'uint256' },
+              { name: 'validBefore', type: 'uint256' },
+              { name: 'nonce',       type: 'bytes32' },
+            ],
+          },
+          primaryType: 'TransferWithAuthorization',
+          message: {
+            from:        from        as `0x${string}`,
+            to:          to          as `0x${string}`,
+            value:       BigInt(value       ?? 0),
+            validAfter:  BigInt(validAfter  ?? 0),
+            validBefore: BigInt(validBefore ?? 0),
+            nonce:       nonce       as `0x${string}`,
+          },
+          signature: sig as `0x${string}`,
+        })
+
+        if (recovered.toLowerCase() !== from?.toLowerCase()) {
+          return { isValid: false, invalidReason: 'invalid_signature' }
+        }
+      } catch (sigErr) {
+        return {
+          isValid:       false,
+          invalidReason: `signature_recovery_failed: ${sigErr instanceof Error ? sigErr.message : String(sigErr)}`,
+        }
+      }
+
       return { isValid: true, payer: from }
 
     } catch (err) {

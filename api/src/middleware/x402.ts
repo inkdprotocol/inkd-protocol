@@ -139,6 +139,58 @@ export function getPaymentAmount(req: Request): bigint | undefined {
   return undefined
 }
 
+// ─── Full authorization extraction ───────────────────────────────────────────
+
+export interface PaymentAuthorizationData {
+  from:        Address
+  to:          Address
+  value:       bigint
+  validAfter:  bigint
+  validBefore: bigint
+  nonce:       `0x${string}`
+  v:           number
+  r:           `0x${string}`
+  s:           `0x${string}`
+}
+
+/**
+ * Extract full EIP-3009 authorization from X-PAYMENT header.
+ * Returns null if header is absent or malformed.
+ */
+export function getPaymentAuthorizationData(req: Request): PaymentAuthorizationData | null {
+  const payload = decodePaymentHeader(req)
+  if (!payload) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const auth = (payload?.payload as any)?.authorization
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sig  = (payload?.payload as any)?.signature as string | undefined
+
+  if (!auth || !sig) return null
+
+  try {
+    const sigHex = sig.startsWith('0x') ? sig.slice(2) : sig
+    if (sigHex.length !== 130) return null
+
+    const r = `0x${sigHex.slice(0, 64)}`   as `0x${string}`
+    const s = `0x${sigHex.slice(64, 128)}` as `0x${string}`
+    let v   = parseInt(sigHex.slice(128, 130), 16)
+    if (v < 27) v += 27  // normalize EIP-2098 compact sig
+
+    return {
+      from:        auth.from  as Address,
+      to:          auth.to    as Address,
+      value:       BigInt(auth.value       ?? 0),
+      validAfter:  BigInt(auth.validAfter  ?? 0),
+      validBefore: BigInt(auth.validBefore ?? 0),
+      nonce:       auth.nonce as `0x${string}`,
+      v, r, s,
+    }
+  } catch {
+    return null
+  }
+}
+
 // ─── Dynamic price middleware for pushVersion ─────────────────────────────────
 
 /**
