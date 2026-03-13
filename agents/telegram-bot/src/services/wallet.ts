@@ -3,6 +3,9 @@
  */
 import crypto from 'node:crypto'
 import { Wallet, JsonRpcProvider, formatEther, formatUnits, Contract } from 'ethers'
+import { createWalletClient, createPublicClient, http } from 'viem'
+import { base } from 'viem/chains'
+import { privateKeyToAccount } from 'viem/accounts'
 
 // Lazy-init encryption secret
 let encryptSecret: Buffer | null = null
@@ -106,11 +109,32 @@ export async function getWalletBalance(address: string): Promise<{
 }
 
 /**
- * Get a Wallet instance from encrypted key
+ * Get a Wallet instance from encrypted key (ethers)
  */
 export function getWalletFromEncrypted(encryptedKey: string): Wallet {
   const privateKey = decryptPrivateKey(encryptedKey)
   const rpcUrl = process.env.BASE_RPC_URL ?? 'https://mainnet.base.org'
   const provider = new JsonRpcProvider(rpcUrl)
   return new Wallet(privateKey, provider)
+}
+
+/**
+ * Get viem WalletClient + PublicClient from encrypted key
+ */
+export function getViemWalletClient(encryptedKey: string) {
+  const privateKey = decryptPrivateKey(encryptedKey)
+  const account = privateKeyToAccount(privateKey as `0x${string}`)
+  
+  const walletClient = createWalletClient({
+    account,
+    chain: base,
+    transport: http(),
+  })
+  
+  const publicClient = createPublicClient({
+    chain: base,
+    transport: http(),
+  })
+  
+  return { walletClient, publicClient, account }
 }
