@@ -84,26 +84,23 @@ export function agentsRouter(cfg: ApiConfig): Router {
       const registryAddress = requireRegistry()
       const { offset, limit } = PaginationQuery.parse(req.query)
 
-      const [agents, total] = await Promise.all([
-        publicClient.readContract({
-          address:      registryAddress,
-          abi:          REGISTRY_ABI,
-          functionName: 'getAgentProjects',
-          args:         [BigInt(offset), BigInt(limit)],
-        }) as unknown as Promise<RawAgent[]>,
-        publicClient.readContract({
-          address:      registryAddress,
-          abi:          REGISTRY_ABI,
-          functionName: 'agentProjectCount',
-        }) as unknown as Promise<bigint>,
-      ])
+      const agents = await publicClient.readContract({
+        address:      registryAddress,
+        abi:          REGISTRY_ABI,
+        functionName: 'getAgentProjects',
+        args:         [BigInt(offset), BigInt(limit)],
+      }) as unknown as RawAgent[]
+
+      // agentProjectCount() has a storage-layout issue after V2 upgrade — returns garbage.
+      // Use agents.length as count; total is approximate (actual count unknown until fixed on-chain).
+      const serialized = agents.map(serializeAgent).filter(a => a.id !== '0')
 
       res.json({
-        data:   agents.map(serializeAgent),
-        total:  total.toString(),
+        data:   serialized,
+        total:  serialized.length,
         offset,
         limit,
-        count:  agents.length,
+        count:  serialized.length,
       })
     } catch (err) {
       sendError(res, err)
