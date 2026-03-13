@@ -2,13 +2,11 @@ import { Bot, Context, InlineKeyboard, InputFile, session, SessionFlavor } from 
 import dotenv from 'dotenv'
 import fs from 'node:fs'
 import path from 'node:path'
-import QRCode from 'qrcode'
-import { getProjectById, getVersion, listProjectsByOwner, listVersions } from './services/indexer'
-import type { IndexedProject, IndexedVersion } from './services/indexer'
 import { createChallenge, recoverWalletFromSignature } from './services/auth'
 import { beginTextUpload, beginRepoUpload, handleUploadMessage, handleRepoCancel, handleRepoConfirm } from './services/uploads'
 import { SqliteStorage } from './services/session'
-import { createWalletConnectSession, extractAddress } from './services/walletconnect'
+import { generateWallet, encryptPrivateKey, getWalletBalance } from './services/wallet'
+import { listProjectsByOwner, getProjectById, listVersions, getVersion, type ApiProject, type ApiVersion } from './services/api'
 
 dotenv.config({ path: process.env.BOT_ENV_PATH ?? '.env' })
 
@@ -19,8 +17,9 @@ if (!token) {
 
 import type { UploadSession } from './services/uploads'
 
-type BotSession = {
+export type BotSession = {
   wallet?: string
+  encryptedKey?: string  // AES-256-GCM encrypted private key (only for bot-generated wallets)
   pendingChallenge?: string
   upload?: UploadSession
 }
@@ -44,20 +43,48 @@ bot.use(async (ctx, next) => {
   await next();
 })
 
+// ─── Keyboards ────────────────────────────────────────────────────────────────
+
 const walletKeyboard = new InlineKeyboard()
-  .text('🔗 WalletConnect', 'wallet_connect')
+  .text('🆕 New Wallet', 'wallet_new')
   .row()
-  .text('✍️ Manual signature', 'wallet_manual')
+  .text('🔑 Connect Wallet', 'wallet_connect')
+
+// ─── Commands ─────────────────────────────────────────────────────────────────
 
 bot.command('start', async ctx => {
-  await ctx.reply('Welcome to inkd bot. Connect your wallet to continue.', {
+  await ctx.reply('Welcome to inkd bot. Connect or create a wallet to continue.', {
     reply_markup: walletKeyboard
   })
+})
+
+bot.command('wallet', async ctx => {
+  if (!ctx.session.wallet) {
+    await ctx.reply('No wallet connected. Use /start to create or connect one.', {
+      reply_markup: walletKeyboard
+    })
+    return
+  }
+  await showWalletInfo(ctx)
+})
+
+bot.command('my_wallet', async ctx => {
+  if (!ctx.session.wallet) {
+    await ctx.reply('No wallet connected. Use /start to create or connect one.', {
+      reply_markup: walletKeyboard
+    })
+    return
+  }
+  await showWalletInfo(ctx)
 })
 
 bot.command('upload_text', async ctx => {
   if (!ctx.session.wallet) {
     await ctx.reply('Connect your wallet first with /start.')
+    return
+  }
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('⚠️ You connected an external wallet. Uploads require a bot-managed wallet with USDC balance.\n\nUse /start → "🆕 New Wallet" to create one.')
     return
   }
   await beginTextUpload(ctx)
@@ -68,77 +95,11 @@ bot.command('upload_repo', async ctx => {
     await ctx.reply('Connect your wallet first with /start.')
     return
   }
-  await beginRepoUpload(ctx)
-})
-
-bot.command('upload_repo', async ctx => {
-  if (!ctx.session.wallet) {
-    await ctx.reply('Connect your wallet first with /start.')
-    return  }
-  await beginRepoUpload(ctx)
-})
-
-bot.on('message:text', async ctx => {
-  if (await handleUploadMessage(ctx)) return
-  const challenge = ctx.session.pendingChallenge
-  if (!challenge) return
-  const text = ctx.message.text.trim()
-  if (!text.startsWith('0x') || text.length < 10) return
-  try {
-    const address = await recoverWalletFromSignature(challenge, text as `0x${string}`)
-    ctx.session.wallet = address
-    ctx.session.pendingChallenge = undefined
-    await ctx.reply(`Wallet ${address} linked. Use /my_projects to view your projects.`)
-  } catch (err) {
-    await ctx.reply('Signature invalid. Please try again.')
-  }
-})
-
-bot.callbackQuery('repo_confirm', handleRepoConfirm)
-bot.callbackQuery('repo_cancel', handleRepoCancel)
-
-bot.callbackQuery('wallet_connect', async ctx => {
-  if (!ctx.chat) {
-    await ctx.answerCallbackQuery({ text: 'Chats only' })
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('⚠️ You connected an external wallet. Uploads require a bot-managed wallet with USDC balance.\n\nUse /start → "🆕 New Wallet" to create one.')
     return
   }
-  await ctx.answerCallbackQuery()
-  await ctx.reply('Generating WalletConnect link …')
-  try {
-    const { uri, approval } = await createWalletConnectSession()
-    if (!uri) {
-      await ctx.reply('WalletConnect did not return a pairing URI. Please try again in a moment.')
-      return
-    }
-    await sendWalletConnectPrompt(ctx, uri)
-    const chatId = ctx.chat.id.toString()
-    approval()
-      .then(async session => {
-        const address = extractAddress(session)
-        const current = (await sqliteStorage.read(chatId)) ?? {}
-        current.wallet = address
-        current.pendingChallenge = undefined
-        await sqliteStorage.write(chatId, current)
-        await ctx.api.sendMessage(
-          ctx.chat!.id,
-          `Wallet ${address} linked via WalletConnect ✅ Use /upload_text or /my_projects.`
-        )
-      })
-      .catch(async err => {
-        await ctx.api.sendMessage(ctx.chat!.id, `WalletConnect session failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
-      })
-  } catch (err) {
-    await ctx.reply(`WalletConnect setup failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
-  }
-})
-
-bot.callbackQuery('wallet_manual', async ctx => {
-  const challenge = createChallenge(ctx.from.id)
-  ctx.session.pendingChallenge = challenge
-  await ctx.answerCallbackQuery()
-  await ctx.reply(
-    `Sign the following message with your Base wallet and send the signature back here:\n\n${challenge}`
-  )
+  await beginRepoUpload(ctx)
 })
 
 bot.command('my_projects', async ctx => {
@@ -146,17 +107,101 @@ bot.command('my_projects', async ctx => {
     await ctx.reply('Connect your wallet first with /start.')
     return
   }
-  const projects = listProjectsByOwner(ctx.session.wallet, 5)
-  if (!projects.length) {
-    await ctx.reply('No projects yet for this wallet.')
-    return
-  }
-  for (const project of projects) {
-    const summary = formatProjectSummary(project)
-    const keyboard = new InlineKeyboard().text('📂 Details', `project:${project.id}`)
-    await ctx.reply(summary, { reply_markup: keyboard })
+  try {
+    const projects = await listProjectsByOwner(ctx.session.wallet, 5)
+    if (!projects.length) {
+      await ctx.reply('No projects yet for this wallet.')
+      return
+    }
+    for (const project of projects) {
+      const summary = formatProjectSummary(project)
+      const keyboard = new InlineKeyboard().text('📂 Details', `project:${project.id}`)
+      await ctx.reply(summary, { reply_markup: keyboard })
+    }
+  } catch (err) {
+    await ctx.reply(`Failed to fetch projects: ${(err as Error).message}`)
   }
 })
+
+// ─── Message handlers ─────────────────────────────────────────────────────────
+
+bot.on('message:text', async ctx => {
+  if (await handleUploadMessage(ctx)) return
+  
+  const challenge = ctx.session.pendingChallenge
+  if (!challenge) return
+  
+  const text = ctx.message.text.trim()
+  if (!text.startsWith('0x') || text.length < 10) return
+  
+  try {
+    const address = await recoverWalletFromSignature(challenge, text as `0x${string}`)
+    ctx.session.wallet = address
+    ctx.session.pendingChallenge = undefined
+    // External wallet — no encryptedKey (read-only)
+    ctx.session.encryptedKey = undefined
+    await ctx.reply(
+      `✅ Wallet ${address} connected (read-only).\n\n` +
+      `⚠️ External wallets can view projects but cannot upload (bot needs to sign USDC transfers).\n\n` +
+      `Use /my_projects to view your projects.\n` +
+      `For uploads, create a bot wallet with /start → "🆕 New Wallet".`
+    )
+  } catch (err) {
+    await ctx.reply('Signature invalid. Please try again.')
+  }
+})
+
+// ─── Callback handlers ────────────────────────────────────────────────────────
+
+bot.callbackQuery('wallet_new', async ctx => {
+  await ctx.answerCallbackQuery()
+  
+  try {
+    const { address, privateKey } = generateWallet()
+    const encryptedKey = encryptPrivateKey(privateKey)
+    
+    ctx.session.wallet = address
+    ctx.session.encryptedKey = encryptedKey
+    ctx.session.pendingChallenge = undefined
+    
+    // Update in storage explicitly
+    if (ctx.chat) {
+      const chatId = ctx.chat.id.toString()
+      const current = (await sqliteStorage.read(chatId)) ?? {}
+      current.wallet = address
+      current.encryptedKey = encryptedKey
+      current.pendingChallenge = undefined
+      await sqliteStorage.write(chatId, current)
+    }
+    
+    await ctx.reply(
+      `🆕 *New Wallet Created*\n\n` +
+      `Address: \`${address}\`\n\n` +
+      `🔐 *Private Key* (SAVE THIS, shown only once!):\n` +
+      `\`${privateKey}\`\n\n` +
+      `⚠️ This is your bot wallet. Fund it with ETH (for gas) and USDC (for uploads) on Base.\n\n` +
+      `Use /wallet to check balance, /upload_text or /upload_repo to upload.`,
+      { parse_mode: 'Markdown' }
+    )
+  } catch (err) {
+    await ctx.reply(`Failed to create wallet: ${(err as Error).message}`)
+  }
+})
+
+bot.callbackQuery('wallet_connect', async ctx => {
+  const challenge = createChallenge(ctx.from.id)
+  ctx.session.pendingChallenge = challenge
+  await ctx.answerCallbackQuery()
+  await ctx.reply(
+    `Sign the following message with your Base wallet and send the signature back here:\n\n` +
+    `\`${challenge}\`\n\n` +
+    `⚠️ Note: Connected wallets are read-only. For uploads, use "🆕 New Wallet" instead.`,
+    { parse_mode: 'Markdown' }
+  )
+})
+
+bot.callbackQuery('repo_confirm', handleRepoConfirm)
+bot.callbackQuery('repo_cancel', handleRepoCancel)
 
 bot.callbackQuery(/^project:(\d+)$/, async ctx => {
   await ctx.answerCallbackQuery()
@@ -165,28 +210,30 @@ bot.callbackQuery(/^project:(\d+)$/, async ctx => {
     await ctx.reply('Invalid project id.')
     return
   }
-  const project = getProjectById(projectId)
-  if (!project) {
-    await ctx.reply('Project not found.')
-    return
-  }
-  const versions = listVersions(projectId, 5)
-  const message = formatProjectDetails(project, versions)
+  try {
+    const project = await getProjectById(projectId)
+    if (!project) {
+      await ctx.reply('Project not found.')
+      return
+    }
+    const versions = await listVersions(projectId, 5)
+    const message = formatProjectDetails(project, versions)
 
-  // Build one download button per version (up to 5), each on its own row
-  const keyboard = new InlineKeyboard()
-  for (const v of versions) {
-    keyboard
-      .text(`⬇ v${v.version_index} · ${v.version_tag}`, `download:${projectId}:${v.version_index}`)
-      .row()
-  }
+    const keyboard = new InlineKeyboard()
+    for (const v of versions) {
+      keyboard
+        .text(`⬇ v${v.versionIndex} · ${v.versionTag}`, `download:${projectId}:${v.versionIndex}`)
+        .row()
+    }
 
-  await ctx.reply(message, { reply_markup: keyboard })
+    await ctx.reply(message, { reply_markup: keyboard })
+  } catch (err) {
+    await ctx.reply(`Failed to fetch project: ${(err as Error).message}`)
+  }
 })
 
 const MAX_DIRECT_BYTES = 48 * 1024 * 1024 // 48 MB Telegram bot API limit
 
-/** Map common MIME types to file extensions for better filenames. */
 function extForMime(mime: string | null): string {
   if (!mime) return ''
   const base = mime.split(';')[0].trim()
@@ -214,18 +261,16 @@ bot.callbackQuery(/^download:(\d+):(\d+)$/, async ctx => {
   const projectId = Number(ctx.match[1])
   const versionIndex = Number(ctx.match[2])
 
-  const version = getVersion(projectId, versionIndex)
-  if (!version) {
-    await ctx.reply('Version not found.')
-    return
-  }
-
-  const url = `https://arweave.net/${version.arweave_hash}`
-
-  // Notify user that we're fetching
-  const statusMsg = await ctx.reply(`⏳ Fetching v${versionIndex} from Arweave…`)
-
   try {
+    const version = await getVersion(projectId, versionIndex)
+    if (!version) {
+      await ctx.reply('Version not found.')
+      return
+    }
+
+    const url = `https://arweave.net/${version.arweaveHash}`
+    const statusMsg = await ctx.reply(`⏳ Fetching v${versionIndex} from Arweave…`)
+
     const response = await fetch(url)
     if (!response.ok) {
       throw new Error(`Arweave responded with HTTP ${response.status}`)
@@ -235,7 +280,6 @@ bot.callbackQuery(/^download:(\d+):(\d+)$/, async ctx => {
     const contentLength = response.headers.get('content-length')
     const byteSize = contentLength ? Number(contentLength) : null
 
-    // If size is known and exceeds limit, send a direct link instead
     if (byteSize !== null && byteSize > MAX_DIRECT_BYTES) {
       await response.body?.cancel()
       const mb = (byteSize / 1024 / 1024).toFixed(1)
@@ -246,84 +290,92 @@ bot.callbackQuery(/^download:(\d+):(\d+)$/, async ctx => {
       return
     }
 
-    // Buffer the response body
     const buffer = Buffer.from(await response.arrayBuffer())
-
-    // Build a descriptive filename: <hash><ext>
     const ext = extForMime(contentType)
-    const filename = `${version.arweave_hash}${ext}`
+    const filename = `${version.arweaveHash}${ext}`
 
     await ctx.replyWithDocument(new InputFile(buffer, filename), {
-      caption: `v${versionIndex} · ${version.version_tag}`
+      caption: `v${versionIndex} · ${version.versionTag}`
     })
 
-    // Remove the "fetching" status message after successful send
     await ctx.api.deleteMessage(ctx.chat!.id, statusMsg.message_id)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
-    await ctx.api.editMessageText(
-      ctx.chat!.id, statusMsg.message_id,
-      `❌ Failed to fetch v${versionIndex}: ${msg}`
-    )
+    await ctx.reply(`❌ Failed to fetch v${versionIndex}: ${msg}`)
   }
 })
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function showWalletInfo(ctx: MyContext) {
+  const wallet = ctx.session.wallet!
+  const isExternal = !ctx.session.encryptedKey
+  
+  try {
+    const balance = await getWalletBalance(wallet)
+    const walletType = isExternal ? '🔑 Connected (read-only)' : '🆕 Bot-managed'
+    
+    await ctx.reply(
+      `*Your Wallet*\n\n` +
+      `Address: \`${wallet}\`\n` +
+      `Type: ${walletType}\n\n` +
+      `*Balance (Base)*\n` +
+      `ETH: ${balance.eth}\n` +
+      `USDC: ${balance.usdc}\n\n` +
+      (isExternal 
+        ? `⚠️ External wallets cannot upload. Create a bot wallet with /start → "🆕 New Wallet".`
+        : `Use /upload_text or /upload_repo to upload.`),
+      { parse_mode: 'Markdown' }
+    )
+  } catch (err) {
+    await ctx.reply(`Wallet: \`${wallet}\`\n\nFailed to fetch balance: ${(err as Error).message}`, { parse_mode: 'Markdown' })
+  }
+}
 
 function shortenAddress(addr?: string) {
   if (!addr) return 'unknown'
   return addr.length <= 10 ? addr : `${addr.slice(0, 6)}…${addr.slice(-4)}`
 }
 
-function formatTimestamp(ts?: number) {
+function formatTimestamp(ts?: string | number) {
   if (!ts) return 'n/a'
-  return new Date(ts * 1000).toLocaleString('de-DE', { timeZone: 'UTC' })
+  const num = typeof ts === 'string' ? Number(ts) : ts
+  return new Date(num * 1000).toLocaleString('de-DE', { timeZone: 'UTC' })
 }
 
-function formatProjectSummary(project: IndexedProject) {
+function formatProjectSummary(project: ApiProject) {
   return [
     `#${project.id} · ${project.name}`,
     `Owner: ${shortenAddress(project.owner)}`,
-    `Versions: ${project.version_count}`,
-    `Updated: ${formatTimestamp(project.updated_at)}`
+    `Versions: ${project.versionCount}`,
+    `Updated: ${formatTimestamp(project.createdAt)}`
   ].join('\n')
 }
 
-function formatProjectDetails(project: IndexedProject, versions: IndexedVersion[]) {
+function formatProjectDetails(project: ApiProject, versions: ApiVersion[]) {
   const header = [
     `📂 ${project.name} (#${project.id})`,
     `Owner: ${shortenAddress(project.owner)}`,
-    `Total versions: ${project.version_count}`
+    `Total versions: ${project.versionCount}`
   ].join('\n')
   if (!versions.length) {
     return `${header}\n\nKeine Versionen gefunden.`
   }
   const lines = versions.map(v => formatVersionLine(v))
   const body = lines.join('\n\n')
-  const extra = versions.length < project.version_count ? '\n… weitere Versionen existieren.' : ''
+  const versionCount = Number(project.versionCount)
+  const extra = versions.length < versionCount ? '\n… weitere Versionen existieren.' : ''
   return `${header}\n\n${body}${extra}`
 }
 
-function formatVersionLine(version: IndexedVersion) {
-  const date = formatTimestamp(version.pushed_at)
-  const ar = version.arweave_hash
+function formatVersionLine(version: ApiVersion) {
+  const date = formatTimestamp(version.pushedAt)
+  const ar = version.arweaveHash
   const link = `https://arweave.net/${ar}`
-  return `v${version.version_index} · ${version.version_tag} (${date})\nArweave: ${ar}\n${link}`
+  return `v${version.versionIndex} · ${version.versionTag} (${date})\nArweave: ${ar}\n${link}`
 }
 
-async function sendWalletConnectPrompt(ctx: MyContext, uri: string) {
-  const deepLink = `https://reown.app/wc?uri=${encodeURIComponent(uri)}`
-  const qrBuffer = await QRCode.toBuffer(uri, { width: 512 })
-  await ctx.reply('Scan or open the link below to approve the session:')
-  await ctx.replyWithPhoto(new InputFile(qrBuffer), {
-    caption: 'Scan this QR code from any WalletConnect-compatible wallet.',
-  })
-  await ctx.reply(
-    'On mobile, tap the button below to open your wallet directly.',
-    {
-      reply_markup: new InlineKeyboard().url('Open Wallet', deepLink)
-    }
-  )
-  await ctx.reply(`WalletConnect URI (Desktop Copy/Paste):\n${uri}`)
-}
+// ─── Start ────────────────────────────────────────────────────────────────────
 
 export async function start() {
   await bot.start({ drop_pending_updates: true })
