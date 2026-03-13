@@ -14,8 +14,8 @@ import { z }      from 'zod'
 import type { Address } from 'viem'
 import { type ApiConfig, ADDRESSES } from '../config.js'
 import { buildPublicClient, buildWalletClient, normalizePrivateKey } from '../clients.js'
-import { getPayerAddress, getPaymentAmount } from '../middleware/x402.js'
-import { REGISTRY_ABI, TREASURY_ABI } from '../abis.js'
+import { getPayerAddress, getPaymentAmount, getPaymentAuthorizationData } from '../middleware/x402.js'
+import { REGISTRY_ABI, TREASURY_ABI, USDC_ABI } from '../abis.js'
 import { getArweaveCostUsdc, calculateCharge } from '../arweave.js'
 import { sendError, NotFoundError, BadRequestError, ServiceUnavailableError } from '../errors.js'
 import { buildIndexerClient, type IndexerProject, type IndexerVersion } from '../indexer/client.js'
@@ -291,8 +291,24 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const { client: walletClient, address: walletAddress } =
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
-      // Settle X402 USDC payment first
+      // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
       if (cfg.treasuryAddress && paymentAmount) {
+        const authData = getPaymentAuthorizationData(req)
+        if (authData) {
+          // 1. Execute EIP-3009 signed USDC transfer: payer → Treasury
+          const usdcAddress = (process.env.USDC_ADDRESS ?? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as Address
+          await walletClient.writeContract({
+            address:      usdcAddress,
+            abi:          USDC_ABI,
+            functionName: 'transferWithAuthorization',
+            args: [
+              authData.from, authData.to,
+              authData.value, authData.validAfter, authData.validBefore,
+              authData.nonce, authData.v, authData.r, authData.s,
+            ],
+          })
+        }
+        // 2. Split settled USDC (Buyback + Treasury)
         await walletClient.writeContract({
           address:      cfg.treasuryAddress,
           abi:          TREASURY_ABI,
@@ -444,8 +460,24 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const { client: walletClient, address: walletAddress } =
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
-      // Settle X402 USDC payment first
+      // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
       if (cfg.treasuryAddress && paymentAmount) {
+        const authData = getPaymentAuthorizationData(req)
+        if (authData) {
+          // 1. Execute EIP-3009 signed USDC transfer: payer → Treasury
+          const usdcAddress = (process.env.USDC_ADDRESS ?? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as Address
+          await walletClient.writeContract({
+            address:      usdcAddress,
+            abi:          USDC_ABI,
+            functionName: 'transferWithAuthorization',
+            args: [
+              authData.from, authData.to,
+              authData.value, authData.validAfter, authData.validBefore,
+              authData.nonce, authData.v, authData.r, authData.s,
+            ],
+          })
+        }
+        // 2. Split settled USDC (Arweave cost + Buyback + Treasury)
         let arweaveCost = 0n
         if (contentSize && contentSize > 0) {
           try { arweaveCost = await getArweaveCostUsdc(contentSize) } catch { /* use 0 */ }
