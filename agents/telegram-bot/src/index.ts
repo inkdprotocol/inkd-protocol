@@ -70,7 +70,7 @@ const walletKeyboard = new InlineKeyboard()
 
 bot.command('start', async ctx => {
   await ctx.reply(
-    `Welcome to inkd bot 🖊\n\n` +
+    `Welcome to inkd bot 🫟\n\n` +
     `Store code, data, and files permanently on Arweave.\n` +
     `Registered on Base. Paid in USDC. No accounts needed.\n\n` +
     `Connect or create a wallet to get started:`,
