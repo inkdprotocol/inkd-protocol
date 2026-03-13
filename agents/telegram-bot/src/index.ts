@@ -3,7 +3,22 @@ import dotenv from 'dotenv'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createChallenge, recoverWalletFromSignature } from './services/auth'
-import { beginTextUpload, beginRepoUpload, handleUploadMessage, handleRepoCancel, handleRepoConfirm, handleTextConfirm, handleTextCancel } from './services/uploads'
+import { 
+  beginTextUpload, 
+  beginRepoUpload, 
+  handleUploadMessage, 
+  handleRepoCancel, 
+  handleRepoConfirm, 
+  handleTextConfirm, 
+  handleTextCancel,
+  beginVersionPush,
+  handlePushTextSelect,
+  handlePushRepoSelect,
+  handlePushConfirm,
+  handlePushCancel,
+  formatApiError,
+  type PendingVersionPush,
+} from './services/uploads'
 import { SqliteStorage } from './services/session'
 import { generateWallet, encryptPrivateKey, getWalletBalance } from './services/wallet'
 import { listProjectsByOwner, getProjectById, listVersions, getVersion, type ApiProject, type ApiVersion } from './services/api'
@@ -22,6 +37,7 @@ export type BotSession = {
   encryptedKey?: string  // AES-256-GCM encrypted private key (only for bot-generated wallets)
   pendingChallenge?: string
   upload?: UploadSession
+  pendingVersionPush?: PendingVersionPush
 }
 
 type MyContext = Context & SessionFlavor<BotSession>
@@ -53,9 +69,13 @@ const walletKeyboard = new InlineKeyboard()
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
 bot.command('start', async ctx => {
-  await ctx.reply('Welcome to inkd bot. Connect or create a wallet to continue.', {
-    reply_markup: walletKeyboard
-  })
+  await ctx.reply(
+    `Welcome to inkd bot 🖊\n\n` +
+    `Store code, data, and files permanently on Arweave.\n` +
+    `Registered on Base. Paid in USDC. No accounts needed.\n\n` +
+    `Connect or create a wallet to get started:`,
+    { reply_markup: walletKeyboard }
+  )
 })
 
 bot.command('wallet', async ctx => {
@@ -114,13 +134,50 @@ bot.command('my_projects', async ctx => {
       return
     }
     for (const project of projects) {
-      const summary = formatProjectSummary(project)
+      // Fetch latest version for arweave link
+      let latestArweave: string | undefined
+      try {
+        const versions = await listVersions(Number(project.id), 1)
+        if (versions.length > 0) {
+          latestArweave = versions[0].arweaveHash
+        }
+      } catch {
+        // ignore - just won't show arweave link
+      }
+      const summary = formatProjectSummary(project, latestArweave)
       const keyboard = new InlineKeyboard().text('📂 Details', `project:${project.id}`)
       await ctx.reply(summary, { reply_markup: keyboard })
     }
   } catch (err) {
-    await ctx.reply(`Failed to fetch projects: ${(err as Error).message}`)
+    await ctx.reply(formatApiError(err))
   }
+})
+
+bot.command('cancel', async ctx => {
+  ctx.session.upload = undefined
+  ctx.session.pendingChallenge = undefined
+  ctx.session.pendingVersionPush = undefined
+  await ctx.reply('Cancelled. Use /start to begin again.')
+})
+
+bot.command('help', async ctx => {
+  await ctx.reply(
+    `📋 *Commands*\n\n` +
+    `/start — Connect or create wallet\n` +
+    `/wallet — Show wallet address & balance\n` +
+    `/upload_text — Upload text content\n` +
+    `/upload_repo — Upload a GitHub repo\n` +
+    `/my_projects — View your projects\n` +
+    `/cancel — Cancel current action\n` +
+    `/help — Show this message\n\n` +
+    `💡 *How it works*\n` +
+    `inkd stores files on Arweave and registers them on Base.\n` +
+    `You pay in USDC. No API key needed — your wallet is your identity.\n\n` +
+    `*Pricing*\n` +
+    `Create project: $0.10 USDC\n` +
+    `Push version: Arweave cost + 20% (min $0.10)`,
+    { parse_mode: 'Markdown' }
+  )
 })
 
 // ─── Message handlers ─────────────────────────────────────────────────────────
@@ -171,11 +228,16 @@ bot.callbackQuery('wallet_new', async ctx => {
       `🔐 *Private Key* (SAVE THIS, shown only once!):\n` +
       `\`${privateKey}\`\n\n` +
       `⚠️ This is your bot wallet. Fund it with ETH (for gas) and USDC (for uploads) on Base.\n\n` +
-      `Use /wallet to check balance, /upload_text or /upload_repo to upload.`,
+      `💡 *Next steps:*\n` +
+      `1. Fund your wallet with USDC on Base\n` +
+      `2. Bridge from Ethereum: bridge.base.org\n` +
+      `3. Buy directly: coinbase.com → send to Base\n\n` +
+      `Minimum for uploads: ~$0.20 USDC\n\n` +
+      `Use /wallet to check your balance.`,
       { parse_mode: 'Markdown' }
     )
   } catch (err) {
-    await ctx.reply(`Failed to create wallet: ${(err as Error).message}`)
+    await ctx.reply(formatApiError(err))
   }
 })
 
@@ -196,6 +258,26 @@ bot.callbackQuery('repo_cancel', handleRepoCancel)
 bot.callbackQuery('text_confirm', handleTextConfirm)
 bot.callbackQuery('text_cancel', handleTextCancel)
 
+// Version push handlers
+bot.callbackQuery(/^push_version:(\d+)$/, async ctx => {
+  await ctx.answerCallbackQuery()
+  const projectId = Number(ctx.match?.[1])
+  if (!projectId) {
+    await ctx.reply('Invalid project id.')
+    return
+  }
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('⚠️ You need a bot-managed wallet for uploads. Use /start → "🆕 New Wallet".')
+    return
+  }
+  await beginVersionPush(ctx, projectId)
+})
+
+bot.callbackQuery(/^push_text:(\d+)$/, handlePushTextSelect)
+bot.callbackQuery(/^push_repo:(\d+)$/, handlePushRepoSelect)
+bot.callbackQuery(/^push_confirm:(\d+)$/, handlePushConfirm)
+bot.callbackQuery('push_cancel', handlePushCancel)
+
 bot.callbackQuery(/^project:(\d+)$/, async ctx => {
   await ctx.answerCallbackQuery()
   const projectId = Number(ctx.match?.[1])
@@ -213,6 +295,10 @@ bot.callbackQuery(/^project:(\d+)$/, async ctx => {
     const message = formatProjectDetails(project, versions)
 
     const keyboard = new InlineKeyboard()
+    
+    // Add push version button at the top
+    keyboard.text('🆕 Push Version', `push_version:${projectId}`).row()
+    
     for (const v of versions) {
       keyboard
         .text(`⬇ v${v.versionIndex} · ${v.versionTag}`, `download:${projectId}:${v.versionIndex}`)
@@ -221,7 +307,7 @@ bot.callbackQuery(/^project:(\d+)$/, async ctx => {
 
     await ctx.reply(message, { reply_markup: keyboard })
   } catch (err) {
-    await ctx.reply(`Failed to fetch project: ${(err as Error).message}`)
+    await ctx.reply(formatApiError(err))
   }
 })
 
@@ -293,8 +379,7 @@ bot.callbackQuery(/^download:(\d+):(\d+)$/, async ctx => {
 
     await ctx.api.deleteMessage(ctx.chat!.id, statusMsg.message_id)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error'
-    await ctx.reply(`❌ Failed to fetch v${versionIndex}: ${msg}`)
+    await ctx.reply(formatApiError(err))
   }
 })
 
@@ -336,13 +421,17 @@ function formatTimestamp(ts?: string | number) {
   return new Date(num * 1000).toLocaleString('de-DE', { timeZone: 'UTC' })
 }
 
-function formatProjectSummary(project: ApiProject) {
-  return [
+function formatProjectSummary(project: ApiProject, latestArweave?: string) {
+  const lines = [
     `#${project.id} · ${project.name}`,
     `Owner: ${shortenAddress(project.owner)}`,
     `Versions: ${project.versionCount}`,
     `Updated: ${formatTimestamp(project.createdAt)}`
-  ].join('\n')
+  ]
+  if (latestArweave) {
+    lines.push(`Latest: https://arweave.net/${latestArweave}`)
+  }
+  return lines.join('\n')
 }
 
 function formatProjectDetails(project: ApiProject, versions: ApiVersion[]) {
@@ -352,12 +441,12 @@ function formatProjectDetails(project: ApiProject, versions: ApiVersion[]) {
     `Total versions: ${project.versionCount}`
   ].join('\n')
   if (!versions.length) {
-    return `${header}\n\nKeine Versionen gefunden.`
+    return `${header}\n\nNo versions found.`
   }
   const lines = versions.map(v => formatVersionLine(v))
   const body = lines.join('\n\n')
   const versionCount = Number(project.versionCount)
-  const extra = versions.length < versionCount ? '\n… weitere Versionen existieren.' : ''
+  const extra = versions.length < versionCount ? '\n… more versions exist.' : ''
   return `${header}\n\n${body}${extra}`
 }
 
@@ -367,6 +456,12 @@ function formatVersionLine(version: ApiVersion) {
   const link = `https://arweave.net/${ar}`
   return `v${version.versionIndex} · ${version.versionTag} (${date})\nArweave: ${ar}\n${link}`
 }
+
+// ─── Error Handler ────────────────────────────────────────────────────────────
+
+bot.catch(err => {
+  console.error('Bot error:', err)
+})
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
