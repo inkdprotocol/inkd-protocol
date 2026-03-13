@@ -109,6 +109,25 @@ export async function getWalletBalance(address: string): Promise<{
 }
 
 /**
+ * Check if wallet has sufficient USDC balance for a payment
+ */
+export async function checkUsdcBalance(address: string, requiredUsdc: bigint): Promise<{
+  ok: boolean
+  balance: bigint
+  required: bigint
+  shortfall: bigint
+}> {
+  const { usdcRaw } = await getWalletBalance(address)
+  const shortfall = requiredUsdc > usdcRaw ? requiredUsdc - usdcRaw : BigInt(0)
+  return {
+    ok: usdcRaw >= requiredUsdc,
+    balance: usdcRaw,
+    required: requiredUsdc,
+    shortfall,
+  }
+}
+
+/**
  * Get a Wallet instance from encrypted key (ethers)
  */
 export function getWalletFromEncrypted(encryptedKey: string): Wallet {
