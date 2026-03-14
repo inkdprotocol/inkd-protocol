@@ -59,10 +59,25 @@ Open `/my_projects` → tap **📂 Details** on a project → tap **🆕 Push Ve
 
 If you start `/upload_repo` with a project name that already exists in your account, the bot offers to push a new version instead of creating a duplicate.
 
+## Public vs Private
+
+Every upload asks:
+
+```
+🔓 Public   🔒 Private
+✖️ Cancel
+```
+
+- **Public** — anyone with the Arweave hash can read the content
+- **Private** — content is encrypted with AES-256-GCM before upload. Only your wallet can decrypt it.
+
+See [Private Uploads](/concepts/private-uploads) for the full security model.
+
 ## Success
 
 After every upload, the bot shows:
 
 - Project ID + transaction hash
 - Arweave link
+- Privacy status (🔓 Public / 🔒 Private)
 - Links to Basescan + inkdprotocol.com

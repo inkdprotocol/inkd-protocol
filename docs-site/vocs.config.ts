@@ -49,7 +49,7 @@ export default defineConfig({
       text: 'Telegram Bot',
       items: [
         { text: 'Overview',        link: '/bot/overview' },
-        { text: 'Wallet Setup',    link: '/bot/wallet' },
+        { text: 'Wallet & Withdraw', link: '/bot/wallet' },
         { text: 'Uploading',       link: '/bot/upload' },
         { text: 'Projects',        link: '/bot/projects' },
       ],
