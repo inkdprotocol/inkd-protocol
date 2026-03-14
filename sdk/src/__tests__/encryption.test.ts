@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { PassthroughEncryption, LitEncryptionProvider } from "../encryption";
-import { EncryptionError } from "../errors";
 import type { EncryptedData, EncryptionConfig } from "../types";
 
 const CONTRACT = "0x1111111111111111111111111111111111111111" as `0x${string}`;

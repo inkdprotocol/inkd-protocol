@@ -9,7 +9,6 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { InkdClient } from "../InkdClient";
-import { ClientNotConnected, ArweaveNotConnected } from "../errors";
 import type { InkdClientConfig } from "../types";
 
 // ─── Shared Config ────────────────────────────────────────────────────────────
