@@ -749,6 +749,16 @@ async function showWalletInfo(ctx: MyContext) {
   try {
     const balance = await getWalletBalance(wallet)
     const walletType = isExternal ? '🔑 Connected (read-only)' : '🆕 Bot-managed'
+
+    // Build action keyboard for bot-managed wallets
+    const keyboard = !isExternal
+      ? new InlineKeyboard()
+          .text('💸 Send USDC', 'wallet_send_usdc')
+          .text('⟠ Send ETH', 'wallet_send_eth')
+          .row()
+          .text('📤 Upload', 'wallet_upload')
+          .text('📂 My Projects', 'wallet_projects')
+      : undefined
     
     await ctx.reply(
       `*Your Wallet*\n\n` +
@@ -759,11 +769,11 @@ async function showWalletInfo(ctx: MyContext) {
       `USDC: ${balance.usdc}\n\n` +
       (isExternal 
         ? `⚠️ External wallets cannot upload. Create a bot wallet with /start → "🆕 New Wallet".`
-        : `Use /upload_text or /upload_repo to upload.`),
-      { parse_mode: 'Markdown' }
+        : `What do you want to do?`),
+      { parse_mode: 'Markdown', reply_markup: keyboard }
     )
     
-    // Send QR code for easy wallet address sharing
+    // QR code for easy deposits
     try {
       const qrBuffer = await QRCode.toBuffer(wallet, { width: 256 })
       await ctx.replyWithPhoto(new InputFile(qrBuffer, 'wallet-qr.png'), {
@@ -776,6 +786,69 @@ async function showWalletInfo(ctx: MyContext) {
     await ctx.reply(`Wallet: \`${wallet}\`\n\nFailed to fetch balance: ${(err as Error).message}`, { parse_mode: 'Markdown' })
   }
 }
+
+// Wallet action shortcuts from /wallet buttons
+bot.callbackQuery('wallet_send_usdc', async ctx => {
+  await ctx.answerCallbackQuery()
+  if (!ctx.session.encryptedKey) { await ctx.reply('Bot-managed wallet required.'); return }
+  ctx.session.withdraw = { step: 'address', asset: 'usdc' }
+  await ctx.reply('Send USDC to which address?\n\nEnter the recipient wallet address (0x…):')
+})
+
+bot.callbackQuery('wallet_send_eth', async ctx => {
+  await ctx.answerCallbackQuery()
+  if (!ctx.session.encryptedKey) { await ctx.reply('Bot-managed wallet required.'); return }
+  ctx.session.withdraw = { step: 'address', asset: 'eth' }
+  await ctx.reply('Send ETH to which address?\n\nEnter the recipient wallet address (0x…):')
+})
+
+bot.callbackQuery('wallet_upload', async ctx => {
+  await ctx.answerCallbackQuery()
+  if (!ctx.session.encryptedKey) { await ctx.reply('Bot-managed wallet required.'); return }
+  await ctx.reply(
+    'What do you want to upload?',
+    { reply_markup: new InlineKeyboard()
+        .text('📝 Text', 'quick_upload_text')
+        .text('📁 File', 'quick_upload_file')
+        .text('🐙 Repo', 'quick_upload_repo') }
+  )
+})
+
+bot.callbackQuery('quick_upload_text', async ctx => {
+  await ctx.answerCallbackQuery()
+  await beginTextUpload(ctx)
+})
+
+bot.callbackQuery('quick_upload_repo', async ctx => {
+  await ctx.answerCallbackQuery()
+  await beginRepoUpload(ctx)
+})
+
+bot.callbackQuery('quick_upload_file', async ctx => {
+  await ctx.answerCallbackQuery()
+  await ctx.reply('Send me a file directly in this chat (PDF, ZIP, image, code…).')
+})
+
+bot.callbackQuery('wallet_projects', async ctx => {
+  await ctx.answerCallbackQuery()
+  // trigger /my_projects inline
+  if (!ctx.session.wallet) { await ctx.reply('No wallet connected.'); return }
+  const { listProjectsByOwner } = await import('./services/api.js')
+  try {
+    const projects = await listProjectsByOwner(ctx.session.wallet)
+    if (!projects.length) {
+      await ctx.reply('No projects yet. Use /upload_text or /upload_repo to create one.')
+      return
+    }
+    const keyboard = new InlineKeyboard()
+    for (const p of projects.slice(0, 10)) {
+      keyboard.text(`📂 ${p.name} (#${p.id})`, `project:${p.id}`).row()
+    }
+    await ctx.reply(`Your projects (${projects.length} total):`, { reply_markup: keyboard })
+  } catch (err) {
+    await ctx.reply(`Failed to load projects: ${(err as Error).message}`)
+  }
+})
 
 function shortenAddress(addr?: string) {
   if (!addr) return 'unknown'

@@ -9,22 +9,42 @@ description: Upload to Arweave, register on Base, pay in USDC — all inside Tel
 
 You send a file or text. The bot uploads it to Arweave, registers it on Base, and charges your wallet in USDC — all in one flow.
 
+---
+
 ## Commands
 
 | Command | Description |
 |---|---|
-| `/start` | Connect or create a wallet |
+| `/start` | Set up wallet (skips straight to your wallet if already connected) |
 | `/tutorial` | Interactive guided tour (4 steps) |
-| `/wallet` | Show wallet address, ETH & USDC balance |
+| `/wallet` | Show address, ETH & USDC balance, QR code |
+| `/withdraw` | Send USDC or ETH to any address |
 | `/export_key` | Export your private key (bot-managed wallets) |
-| `/upload_text` | Upload text content |
-| `/upload_repo` | Archive a GitHub repo |
-| `/my_projects` | View your projects |
+| `/upload_text` | Upload text content to Arweave |
+| `/upload_repo` | Archive a GitHub repo permanently |
+| `/my_projects` | View your on-chain projects |
 | `/search <name>` | Search public projects |
 | `/history` | View your last 5 uploads |
 | `/links` | Website, Twitter, buy $INKD |
 | `/cancel` | Cancel current action |
 | `/help` | Show all commands |
+
+---
+
+## Upload privacy
+
+Every upload asks before proceeding:
+
+```
+🔓 Public   🔒 Private
+✖️ Cancel
+```
+
+**Public** — content stored as-is on Arweave, anyone with the hash can read it.
+
+**Private** — content encrypted with AES-256-GCM before upload. Only your wallet can decrypt. See [Private Uploads](/concepts/private-uploads).
+
+---
 
 ## How it works
 
@@ -38,6 +58,8 @@ User → Telegram Bot
 
 You pay in USDC on Base. The bot holds a bot-managed wallet for you (encrypted, AES-256-GCM). No custody risk — you own the key.
 
+---
+
 ## Pricing
 
 | Action | Cost |
@@ -45,7 +67,9 @@ You pay in USDC on Base. The bot holds a bot-managed wallet for you (encrypted, 
 | Create project | $0.10 USDC |
 | Push version | Arweave cost × 1.20 (min $0.10) |
 
-Prices are on-chain. The bot shows the exact cost before every upload.
+Prices are on-chain. The bot shows the exact cost and asks for confirmation before every upload.
+
+---
 
 ## Infrastructure
 
