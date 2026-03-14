@@ -1,7 +1,4 @@
-// Optional dependency — not available on Vercel/serverless environments
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-let Database: typeof import('better-sqlite3') | null = null
-try { Database = require('better-sqlite3') } catch { /* not available */ }
+import Database from 'better-sqlite3'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -43,16 +40,14 @@ export interface IndexerHealth {
 }
 
 export class IndexerClient {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly db: any
+  private readonly db: Database.Database
 
   constructor(dbPath: string) {
     const resolved = path.resolve(dbPath)
     if (!fs.existsSync(resolved)) {
       throw new Error(`Indexer DB not found at ${resolved}`)
     }
-    if (!Database) throw new Error('better-sqlite3 not available in this environment')
-    this.db = new (Database as any)(resolved, { readonly: true, fileMustExist: true })
+    this.db = new Database(resolved, { readonly: true, fileMustExist: true })
   }
 
   listProjects(offset: number, limit: number): IndexerProject[] {
