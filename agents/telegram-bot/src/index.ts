@@ -215,11 +215,18 @@ bot.callbackQuery('home_upload', async ctx => {
     })
     return
   }
-  await ctx.reply('What do you want to upload?', {
-    reply_markup: new InlineKeyboard()
-      .text('📝 Text', 'upload_text_start').text('🐙 GitHub Repo', 'upload_repo_start').row()
-      .text('🏠 Home', 'nav_home'),
-  })
+  await ctx.reply(
+    '*What do you want to store?*\n\n' +
+    '📎 Send any *image, video, PDF or file* directly here — the bot will pick it up automatically.\n\n' +
+    'Or choose:',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: new InlineKeyboard()
+        .text('📝 Text / Note', 'upload_text_start').row()
+        .text('🐙 GitHub Repo', 'upload_repo_start').row()
+        .text('🏠 Home', 'nav_home'),
+    }
+  )
 })
 
 bot.callbackQuery('upload_text_start', async ctx => {
