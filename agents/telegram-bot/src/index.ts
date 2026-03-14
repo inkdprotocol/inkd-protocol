@@ -84,9 +84,10 @@ async function showHomeMenu(ctx: MyContext) {
     .text('🔍 Search', 'home_search').text('❓ Help', 'home_help').row()
     .text('🎓 Tutorial', 'start_tour')
 
-  const caption = hasWallet
-    ? `🫟 *inkd*\n\nWallet: \`${ctx.session.wallet}\``
-    : '🫟 *inkd*\n\nStore files permanently on Arweave.\nRegistered on Base. Paid in USDC.'
+  const caption = '🫟 *inkd*\n\nPermanent storage on Arweave. Registered on Base. Paid in USDC.\n\n' +
+    '[🌐 inkdprotocol.com](https://inkdprotocol.com)  ·  ' +
+    '[𝕏 @inkdprotocol](https://twitter.com/inkdprotocol)  ·  ' +
+    '[GitHub](https://github.com/inkdprotocol/inkd-protocol)'
 
   try {
     await ctx.replyWithPhoto(LOGO_URL, {
