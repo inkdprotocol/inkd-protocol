@@ -175,6 +175,26 @@ export async function beginRepoUpload(ctx: MyContext) {
 }
 
 /**
+ * Dispatch: is it a username/profile URL or a direct repo?
+ */
+async function handleGithubUsernameOrRepo(ctx: MyContext, input: string) {
+  // GitHub profile URL → extract username
+  const ghProfileMatch = input.match(/^https?:\/\/github\.com\/([A-Za-z0-9_-]+)\/?$/)
+  if (ghProfileMatch) {
+    await handleGithubUsername(ctx, ghProfileMatch[1])
+    return
+  }
+  // Plain username (no slash, no http)
+  const isUsername = !input.includes('/') && !input.startsWith('http') && /^@?[a-zA-Z0-9_-]+$/.test(input)
+  if (isUsername) {
+    await handleGithubUsername(ctx, input.replace(/^@/, ''))
+    return
+  }
+  // Treat as direct owner/repo or full URL
+  await handleGithubRepoSelected(ctx, input)
+}
+
+/**
  * Handle a selected GitHub repo (owner/repo) — download + show confirm
  */
 export async function handleGithubRepoSelected(ctx: MyContext, fullName: string) {
@@ -523,7 +543,19 @@ export async function handleUploadMessage(ctx: MyContext) {
     return true
   }
 
-  // Step 1: Get project name
+  // For repo uploads: skip project name step — use repo name directly
+  if (upload.type === 'repo' && !upload.projectName) {
+    const text = ctx.message?.text?.trim()
+    if (!text) {
+      await ctx.reply('Please send a GitHub username or `owner/repo`.')
+      return true
+    }
+    // Treat input as username/URL/repo — go straight to repo flow
+    await handleGithubUsernameOrRepo(ctx, text)
+    return true
+  }
+
+  // Step 1: Get project name (text uploads only)
   if (!upload.projectName) {
     const text = ctx.message?.text?.trim()
     if (!text) {
@@ -531,29 +563,7 @@ export async function handleUploadMessage(ctx: MyContext) {
       return true
     }
     upload.projectName = text
-    
-    // Auto version detection: check if project with same name exists
-    if (upload.type === 'repo' && ctx.session.wallet) {
-      try {
-        const existing = await findProjectByOwnerAndName(ctx.session.wallet, text)
-        if (existing) {
-          ctx.session.suggestedProjectId = existing.id
-          await ctx.reply(
-            `📦 You already have a project named "${text}" (#${existing.id}).\n\nWhat do you want to do?`,
-            {
-              reply_markup: new InlineKeyboard()
-                .text(`🔄 Push new version to #${existing.id}`, `push_existing:${existing.id}`)
-                .row()
-                .text('🆕 Create new project', 'create_new_project')
-            }
-          )
-          return true
-        }
-      } catch {
-        // Ignore errors - continue with normal flow
-      }
-    }
-    
+
     if (upload.type === 'repo') {
       await ctx.reply('🔗 Paste the GitHub repo URL:\n\n`owner/repo` or `https://github.com/owner/repo`', { parse_mode: 'Markdown' })
     } else {
