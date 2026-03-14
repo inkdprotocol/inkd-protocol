@@ -46,7 +46,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@inkd/sdk": "^1.0.0",
+    "@inkd/sdk": "^1.1.1",
     "viem": "^2.0.0"
   },
   "devDependencies": {

@@ -55,11 +55,6 @@
   "peerDependencies": {
     "viem": ">=2.0.0"
   },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@irys/sdk": "^0.2.11",
