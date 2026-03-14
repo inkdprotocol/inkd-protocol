@@ -42,6 +42,5 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.6.2"
-  },
-  "type": "module"
+  }
 }
