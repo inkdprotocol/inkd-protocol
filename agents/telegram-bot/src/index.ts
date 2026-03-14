@@ -200,6 +200,45 @@ bot.command('export_key', async ctx => {
   )
 })
 
+bot.command('history', async ctx => {
+  if (!ctx.session.wallet) {
+    await ctx.reply('Connect your wallet first with /start.')
+    return
+  }
+  
+  try {
+    const projects = await listProjectsByOwner(ctx.session.wallet, 10)
+    if (!projects.length) {
+      await ctx.reply('No upload history yet.')
+      return
+    }
+    
+    // Get latest version from each project, sort by date, show top 5
+    const versionPromises = projects.slice(0, 10).map(async p => {
+      const versions = await listVersions(Number(p.id), 1)
+      return versions.map(v => ({ ...v, projectName: p.name, projectId: p.id }))
+    })
+    
+    const allVersions = (await Promise.all(versionPromises)).flat()
+    allVersions.sort((a, b) => Number(b.pushedAt) - Number(a.pushedAt))
+    
+    const recent = allVersions.slice(0, 5)
+    if (!recent.length) {
+      await ctx.reply('No versions uploaded yet.')
+      return
+    }
+    
+    const lines = recent.map(v => {
+      const date = new Date(Number(v.pushedAt) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return `📄 *${v.projectName}* v${v.versionIndex} — ${date}\n↳ [Arweave](https://arweave.net/${v.arweaveHash})`
+    })
+    
+    await ctx.reply(`*Recent uploads*\n\n${lines.join('\n\n')}`, { parse_mode: 'Markdown' })
+  } catch (err) {
+    await ctx.reply(formatApiError(err))
+  }
+})
+
 bot.command('search', async ctx => {
   const query = ctx.match?.trim()
   if (!query) {
@@ -231,6 +270,7 @@ bot.command('help', async ctx => {
     `/upload_text — Upload text content\n` +
     `/upload_repo — Upload a GitHub repo\n` +
     `/my_projects — View your projects\n` +
+    `/history — View recent uploads\n` +
     `/search <name> — Search public projects\n` +
     `/export_key — Export your private key\n` +
     `/tutorial — Interactive guided tour\n` +
@@ -782,6 +822,7 @@ export async function start() {
     { command: 'upload_text',  description: 'Upload text content to Arweave' },
     { command: 'upload_repo',  description: 'Upload a GitHub repo to Arweave' },
     { command: 'my_projects',  description: 'View your projects' },
+    { command: 'history',      description: 'View recent uploads' },
     { command: 'search',       description: 'Search public projects' },
     { command: 'export_key',   description: 'Export your private key (bot wallets only)' },
     { command: 'tutorial',     description: 'Interactive guided tour' },
