@@ -13,8 +13,6 @@ const TEST_CONFIG = {
   chainId: 84532,
 };
 
-const VALID_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-
 describe("InkdClient — connectArweave()", () => {
   it("throws ArweaveNotConnected when inscribe called without connectArweave()", async () => {
     const client = new InkdClient(TEST_CONFIG);
