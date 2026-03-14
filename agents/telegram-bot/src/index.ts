@@ -1,4 +1,5 @@
-import { Bot, Context, InlineKeyboard, InputFile, session, SessionFlavor } from 'grammy'
+import { Bot, Context, InlineKeyboard, InputFile, session, SessionFlavor, webhookCallback } from 'grammy'
+import http from 'node:http'
 import dotenv from 'dotenv'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -758,8 +759,30 @@ export async function start() {
     { command: 'cancel',       description: 'Cancel current action' },
     { command: 'help',         description: 'Show all commands' },
   ])
-  await bot.start({ drop_pending_updates: true })
-  console.log('inkd bot running')
+
+  const USE_WEBHOOK = process.env.BOT_WEBHOOK_URL
+
+  if (USE_WEBHOOK) {
+    // Webhook mode
+    const handleUpdate = webhookCallback(bot, 'http')
+    const server = http.createServer(async (req, res) => {
+      if (req.method === 'POST' && req.url === '/webhook') {
+        await handleUpdate(req, res)
+      } else {
+        res.writeHead(200)
+        res.end('inkd bot ok')
+      }
+    })
+
+    const port = parseInt(process.env.BOT_PORT ?? '3001')
+    server.listen(port, () => console.log(`inkd bot webhook on :${port}`))
+    await bot.api.setWebhook(`${USE_WEBHOOK}/webhook`)
+    console.log(`inkd bot webhook registered: ${USE_WEBHOOK}/webhook`)
+  } else {
+    // Polling mode (default)
+    await bot.start({ drop_pending_updates: true })
+    console.log('inkd bot running (polling)')
+  }
 }
 
 start().catch(err => {
