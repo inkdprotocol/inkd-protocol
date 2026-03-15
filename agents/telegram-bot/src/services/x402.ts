@@ -76,17 +76,19 @@ function buildPayFetch(encryptedKey: string): typeof fetch {
 
 // ─── Upload to Arweave (free endpoint, no payment) ────────────────────────────
 
-const IRYS_NODE = process.env.IRYS_NODE_URL ?? 'https://node2.irys.xyz'
 const API_SIZE_LIMIT = 3 * 1024 * 1024 // 3 MB — stay under Vercel's 4.5 MB limit (base64 overhead ~33%)
+const TURBO_PAYMENT_URL = 'https://payment.ardrive.io/v1'
+const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+const TURBO_DEPOSIT = '0x6A0A10FFD285c971B841bee8892878c0d583Bf67'
 
 export async function uploadToArweave(
   data: Buffer,
   contentType: string,
   filename: string
 ): Promise<UploadResponse> {
-  // For large files, upload directly to Irys instead of through the API (Vercel 4.5MB limit)
+  // For large files, upload directly via Turbo instead of through the API (Vercel 4.5MB limit)
   if (data.length > API_SIZE_LIMIT) {
-    return uploadToIrysDirect(data, contentType, filename)
+    return uploadViaTurbo(data, contentType, filename)
   }
 
   const res = await fetch(`${API_URL}/v1/upload`, {
@@ -101,9 +103,9 @@ export async function uploadToArweave(
 
   if (!res.ok) {
     const text = await res.text()
-    // Fallback to direct Irys on API error
+    // Fallback to direct Turbo on API error
     if (res.status === 413) {
-      return uploadToIrysDirect(data, contentType, filename)
+      return uploadViaTurbo(data, contentType, filename)
     }
     throw new Error(`Upload to Arweave failed ${res.status}: ${text}`)
   }
@@ -111,7 +113,11 @@ export async function uploadToArweave(
   return res.json() as Promise<UploadResponse>
 }
 
-async function uploadToIrysDirect(
+/**
+ * Upload large files directly via ArDrive Turbo.
+ * Uses USDC on Base for payment — automatically tops up if needed.
+ */
+async function uploadViaTurbo(
   data: Buffer,
   contentType: string,
   filename: string
@@ -119,12 +125,21 @@ async function uploadToIrysDirect(
   const serverKey = process.env.BOT_SERVER_WALLET_KEY
   if (!serverKey) throw new Error('BOT_SERVER_WALLET_KEY not set — cannot upload large files')
 
-  // @ts-ignore
-  const irysModule = await import('@irys/sdk')
-  const IrysClass = irysModule.default ?? irysModule.NodeIrys
-  if (!IrysClass) throw new Error('Could not load Irys SDK')
-  const irys = new IrysClass({ url: IRYS_NODE, token: 'ethereum', key: serverKey })
-  await irys.ready()
+  // @ts-ignore - moduleResolution
+  const { TurboFactory, EthereumSigner } = await import('@ardrive/turbo-sdk/node')
+  const { Readable } = await import('stream')
+  
+  const signer = new EthereumSigner(serverKey)
+  const turbo = TurboFactory.authenticated({ signer })
+
+  // Check winc balance and top up if needed
+  const { winc } = await turbo.getBalance()
+  const [cost] = await turbo.getUploadCosts({ bytes: [data.length] })
+  
+  if (BigInt(winc) < BigInt(cost.winc)) {
+    // Need to top up — send $1 USDC to Turbo and credit it
+    await topUpTurboWithUsdc(serverKey, 1_000_000n) // 1 USDC
+  }
 
   const tags = [
     { name: 'Content-Type', value: contentType },
@@ -132,13 +147,50 @@ async function uploadToIrysDirect(
     { name: 'File-Name', value: filename },
   ]
 
-  const receipt = await irys.upload(data, { tags })
-  const txId = receipt.id as string
+  const result = await turbo.uploadFile({
+    fileStreamFactory: () => Readable.from(data),
+    fileSizeFactory: () => data.length,
+    dataItemOpts: { tags },
+  })
+  
+  const txId = result.id
   return {
     hash: txId,
     txId,
     url: `https://arweave.net/${txId}`,
     bytes: data.length,
+  }
+}
+
+/**
+ * Top up Turbo balance by sending USDC on Base and crediting the TX
+ */
+async function topUpTurboWithUsdc(privateKey: string, amount: bigint): Promise<void> {
+  const { ethers } = await import('ethers')
+  
+  const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
+  const wallet = new ethers.Wallet(privateKey, provider)
+  
+  const usdc = new ethers.Contract(
+    USDC_BASE,
+    ['function transfer(address,uint256) returns (bool)'],
+    wallet
+  )
+  
+  // Send USDC to Turbo deposit address
+  const tx = await usdc.transfer(TURBO_DEPOSIT, amount)
+  await tx.wait()
+  
+  // Credit the transaction at Turbo
+  const creditRes = await fetch(`${TURBO_PAYMENT_URL}/account/balance/base-usdc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tx_id: tx.hash }),
+  })
+  
+  if (!creditRes.ok) {
+    const text = await creditRes.text()
+    throw new Error(`Failed to credit Turbo: ${text}`)
   }
 }
 
@@ -199,4 +251,27 @@ export async function pushVersion(
   }
 
   return res.json() as Promise<PushVersionResponse>
+}
+
+// ─── Create project with auto-retry on NameTaken ──────────────────────────────
+
+export async function createProjectAutoName(
+  encryptedKey: string,
+  body: { name: string; description?: string; license?: string }
+): Promise<CreateProjectResponse & { finalName: string }> {
+  const baseName = body.name.slice(0, 60) // leave room for suffix
+  
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const name = attempt === 0 ? baseName : `${baseName}-${attempt + 1}`
+    try {
+      const result = await createProject(encryptedKey, { ...body, name })
+      return { ...result, finalName: name }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const isNameTaken = msg.includes('NAME_TAKEN') || msg.includes('NameTaken') || msg.includes('0x9e4b2685')
+      if (!isNameTaken) throw err
+      // name taken — try next suffix
+    }
+  }
+  throw new Error('Could not find available project name after 10 attempts')
 }

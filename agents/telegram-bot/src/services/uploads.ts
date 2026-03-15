@@ -8,7 +8,7 @@ const MAX_TEXT_BYTES  = 512 * 1024       // 512 KB text limit
 const MAX_REPO_MB     = 100              // 100 MB repo zip limit
 import { parseRepoInput, fetchRepoDefaultBranch, downloadRepoZip, listUserRepos } from './github.js'
 import { getUploadPriceEstimate, findProjectByOwnerAndName, type PriceEstimate } from './api.js'
-import { uploadToArweave, createProject, pushVersion } from './x402.js'
+import { uploadToArweave, createProject, createProjectAutoName, pushVersion } from './x402.js'
 import { checkUsdcBalance, decryptPrivateKey } from './wallet.js'
 import { privateKeyToAccount } from 'viem/accounts'
 import { encryptBuffer } from './crypto.js'
@@ -867,7 +867,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
     )
 
     // Step 2: Create project with x402 payment
-    const projectResult = await createProject(encryptedKey, {
+    const projectResult = await createProjectAutoName(encryptedKey, {
       name: projectName,
       description: (upload as any).description || `Text upload (${formatBytes(pending.size)})`,
       license: 'MIT',
@@ -990,7 +990,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
     )
 
     // Step 3: Create project with x402 payment
-    const projectResult = await createProject(encryptedKey, {
+    const projectResult = await createProjectAutoName(encryptedKey, {
       name: projectName,
       description: (upload as any).description || `File upload: ${pending.fileName} (${formatBytes(pending.fileSize)})`,
       license: 'MIT',
@@ -1124,7 +1124,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
     )
 
     // Step 2: Create project with x402 payment
-    const projectResult = await createProject(encryptedKey, {
+    const projectResult = await createProjectAutoName(encryptedKey, {
       name: pending.projectName,
       description: `GitHub: ${pending.owner}/${pending.repo}@${pending.ref}`,
       license: 'MIT',
