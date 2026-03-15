@@ -240,7 +240,7 @@ export function buildDynamicVersionPriceMiddleware(cfg: X402Config): RequestHand
         amount:            price.toString(),
         asset:             usdcAddr,
         payTo:             cfg.treasuryAddress,
-        maxTimeoutSeconds: 300,
+        maxTimeoutSeconds: 3600, // 1 hour — allows for slow repo downloads before payment
         extra:             { name: 'USD Coin', version: '2', token: usdcAddr },
       }],
     }
