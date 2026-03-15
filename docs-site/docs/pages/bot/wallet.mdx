@@ -1,9 +1,9 @@
 ---
-title: Wallet & Withdraw
-description: Create a wallet, add funds, and send USDC or ETH — all inside Telegram.
+title: Wallet
+description: Create a wallet, check balance, send USDC, and export your key — all inside Telegram.
 ---
 
-# Wallet & Withdraw
+# Wallet
 
 Your wallet is your identity in inkd. It holds your USDC balance and signs every upload.
 
@@ -11,39 +11,39 @@ Your wallet is your identity in inkd. It holds your USDC balance and signs every
 
 ## Create a wallet
 
-Run `/start`. If you don't have a wallet yet, tap **✨ Create Wallet**.
+`/start` → tap **🆕 New Wallet**.
 
-The bot generates an Ethereum wallet and stores the encrypted key in your session.
+The bot generates an Ethereum wallet, encrypts the private key, and shows it **once**:
 
 ```
-✅ Wallet created!
+🆕 Wallet Created
 
-Your address:
 0xAbCd…EfGh
 
-🔑 Save your key — shown once:
-[private key]
+🔐 Private Key — SAVE NOW (shown once only!)
+0x...
+
+⚠️ Store this offline. Anyone with this key owns your funds.
 ```
 
-**Save the key immediately.** Anyone who has it can access your funds. The bot will not show it again (except via `/export_key`).
+Save the key immediately. The bot will not show it again (only via `/export_key`).
+
+After creation the bot immediately shows your funding screen.
 
 ---
 
 ## Add funds
 
-```
-/deposit
-```
+Tap **📥 Add Funds** in `/wallet` or after wallet creation.
 
-Or tap **📥 Add Funds** in `/wallet`.
+Send **USDC on Base** to your wallet address. Minimum for uploads: ~$0.10 USDC.
 
-Shows your address + QR code. Send USDC on Base to start uploading.
+Get USDC:
+- [Coinbase](https://coinbase.com)
+- [Uniswap](https://app.uniswap.org)
+- [bridge.base.org](https://bridge.base.org)
 
-**Get USDC on Base:**
-- [Coinbase](https://coinbase.com) — buy and send to Base
-- [bridge.base.org](https://bridge.base.org) — bridge from Ethereum
-
-Minimum for uploads: ~$0.20 USDC
+**Wallet monitor:** The bot checks your balance every 60 seconds and notifies you the moment USDC arrives.
 
 ---
 
@@ -53,43 +53,17 @@ Minimum for uploads: ~$0.20 USDC
 /wallet
 ```
 
-```
-💳 Your Wallet
-
-0x1234…5678
-─────────────────
-💵 USDC   12.50
-⟠  ETH    0.0032
-─────────────────
-```
-
-Quick actions: **📥 Add Funds · 💸 Send · 📁 My Files · ⬆️ Upload**
+Shows your address, ETH balance, and USDC balance with quick action buttons.
 
 ---
 
-## Send funds
+## Send USDC
 
-```
-/withdraw
-```
+Tap **💸 Send** in `/wallet`:
 
-Or tap **💸 Send** in `/wallet`.
-
-1. Choose **💵 USDC** or **⟠ ETH**
-2. Enter recipient address (0x…)
-3. Enter amount
-4. Confirm:
-
-```
-📤 Confirm send
-
-💵 25.00 USDC
-→ 0x1234…5678
-
-This cannot be undone.
-```
-
-Tap **✅ Send now** — transaction is broadcast on Base.
+1. Enter recipient address (`0x…`)
+2. Bot shows your balance and lets you enter an amount — or tap **Send all**
+3. Transaction is broadcast on Base instantly
 
 ---
 
@@ -99,13 +73,12 @@ Tap **✅ Send now** — transaction is broadcast on Base.
 /export_key
 ```
 
-Shows your private key after a confirmation step. Use this to import into MetaMask or any EVM wallet.
+Shows your private key after a security warning + confirmation tap. Use this to import into MetaMask, Coinbase Wallet, or any EVM wallet.
 
 ---
 
 ## Security
 
 - Keys are encrypted with AES-256-GCM using a server-side secret
-- Keys are never logged or sent anywhere
-- `/export_key` requires a confirmation tap
-- If you lose Telegram access, use the exported key to recover your wallet
+- Keys are never logged or transmitted
+- External wallets (connected via signature) are read-only — cannot upload

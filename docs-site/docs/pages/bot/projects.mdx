@@ -1,6 +1,6 @@
 ---
 title: Projects & Discovery
-description: View, search, and share projects via inkd bot.
+description: View, search, browse trending projects, and share via the inkd Telegram bot.
 ---
 
 # Projects & Discovery
@@ -11,15 +11,7 @@ description: View, search, and share projects via inkd bot.
 /my_projects
 ```
 
-Lists your 5 most recent projects. Tap **📂 Details** to see versions, download files, push a new version, or share.
-
-## Search
-
-```
-/search <name>
-```
-
-Searches public projects by name across all wallets. Returns up to 5 results.
+Lists your most recent projects. Tap any project to open it.
 
 ## History
 
@@ -27,36 +19,56 @@ Searches public projects by name across all wallets. Returns up to 5 results.
 /history
 ```
 
-Shows your last 5 uploaded versions across all projects — with date and Arweave link.
+Recent uploads with direct share links.
+
+## Search
+
+```
+/search <name>
+```
+
+Search public projects by name. Returns results with **📂 Details** buttons.
+
+## Trending
+
+```
+/top
+```
+
+Browse the latest public projects from all wallets.
+
+## Protocol stats
+
+```
+/stats
+```
+
+Live stats: total project count, token supply, network.
+
+---
 
 ## Project details
 
-Tap **📂 Details** on any project to see:
+Tap any project to see:
 
-- Owner address
-- Version count
-- All versions with Arweave links + timestamps
-- Download buttons per version (bot fetches from Arweave and sends the file)
-
-## Share
-
-In project details, tap **🔗 Share** to get a formatted message with:
-
-- Project name + owner
-- Version count
-- Latest Arweave link
-- inkdprotocol.com attribution
-
-Ready to forward to anyone.
+- Owner address + version count
+- **👁 Preview** — first 400 chars of the latest version (text files)
+- **🆕 Push Version** — push a new version with auto-suggested tag
+- **🔗 Share** — formatted share card with Arweave link
+- **⬇ v1.0.0** — download any version directly
 
 ## Download
 
-Tap **⬇ v1.0.0** on any version. The bot fetches the file from Arweave and sends it directly in chat.
+Tap **⬇ v1.x** on any version. The bot fetches the file from Arweave and sends it in chat. Files over 48 MB get a direct Arweave link.
 
-Files over 48 MB get a direct Arweave link instead (Telegram upload limit).
+## Preview
+
+Tap **👁 Preview** to see the first 400 characters of a text file inline — without leaving the chat or opening Arweave.
+
+## Share
+
+Tap **🔗 Share** for a formatted card with project name, version count, Arweave link, and Basescan link. Forward it anywhere.
 
 ## Inline search
 
-Type `@inkdbot <query>` in any Telegram chat to search inkd projects without opening the bot.
-
-> **Note:** Inline mode must be enabled via @BotFather → `/setinline`.
+Type `@inkdbot <query>` in any Telegram chat to search inkd without opening the bot.

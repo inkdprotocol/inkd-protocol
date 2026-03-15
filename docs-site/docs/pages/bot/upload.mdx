@@ -1,6 +1,6 @@
 ---
 title: Uploading
-description: Store text, files, and GitHub repos permanently via the inkd Telegram bot.
+description: Store text, files, photos, videos, and GitHub repos permanently via the inkd Telegram bot.
 ---
 
 # Uploading
@@ -11,27 +11,27 @@ Everything you store goes permanently to Arweave and is registered on-chain on B
 
 ## How to upload
 
-Tap **⬆️ Upload a File** from the home screen, or just send a file directly to the bot.
+Tap **⬆️ Upload a File** from the home screen — or just send a file, photo, or video directly. The bot detects it automatically.
 
 ---
 
-## File (image, PDF, video, ZIP…)
+## File, Photo, or Video
 
-Send any file directly to the bot — it's automatically detected.
+Send any file, image, or video directly to the bot.
 
-1. Send the file
+1. Bot receives it and asks for a name
 2. Enter a name
 3. Enter a description (optional — tap ⏭ Skip)
 4. Choose visibility: **🌍 Public** or **🔒 Only me**
 5. Confirm cost → stored
 
-Supports images, PDFs, videos, ZIPs, and more. Max 50 MB.
+Supports all file types. Max 50 MB.
 
 ---
 
 ## Text / Note
 
-Tap **📝 Text / Note** from the upload menu.
+Tap **📝 Text / Note** from the upload menu or use `/upload_text`.
 
 1. Enter a name
 2. Enter a description (optional)
@@ -43,48 +43,54 @@ Tap **📝 Text / Note** from the upload menu.
 
 ## GitHub Repo
 
-Tap **🐙 GitHub Repo** from the upload menu.
+Tap **🐙 GitHub Repo** or use `/upload_repo`.
 
-1. Send a GitHub username or profile link:
-   - `inkdprotocol`
-   - `github.com/inkdprotocol`
-   - `owner/repo` (direct)
-   - `https://github.com/owner/repo` (direct)
-2. If you sent a username → bot lists all public repos as buttons (with ⭐ stars)
-3. Tap a repo → bot downloads the ZIP automatically
-4. See size + cost
-5. Choose visibility
-6. Confirm → stored
-
-The project name is taken from the repo name automatically. No extra steps.
+1. Send a GitHub username, profile link, or repo:
+   - `inkdprotocol` → lists all public repos with ⭐ stars
+   - `github.com/inkdprotocol` → same
+   - `owner/repo` → direct upload
+   - `https://github.com/owner/repo` → direct upload
+2. Bot downloads the ZIP, shows size + cost
+3. Choose visibility
+4. Confirm → stored
 
 ---
 
 ## Public vs Private
 
-Before every upload:
-
-```
-🌍 Public   🔒 Only me
-```
+Before every upload you choose:
 
 - **🌍 Public** — anyone with the Arweave link can read it
-- **🔒 Only me** — encrypted before upload. Only your wallet can decrypt.
+- **🔒 Only me** — AES-256 encrypted before upload. Only your wallet can decrypt.
 
 See [Private Uploads](/concepts/private-uploads) for the full security model.
 
 ---
 
-## Cost
+## Cost Estimator
 
-Every upload shows estimated cost before you confirm:
+Not sure what something will cost? Check before uploading:
 
 ```
-📦 1.2 MB
-💵 0.0032 USDC
+/estimate 500kb   → $0.10 USDC
+/estimate 4mb     → $0.14 USDC
+/estimate 100mb   → $1.83 USDC
 ```
 
-Pricing = Arweave storage cost + 20% protocol fee (minimum $0.10 USDC).
+Exact cost is always shown before you confirm.
+
+---
+
+## Push a new version
+
+Already have a project? Push an update:
+
+1. Go to **📁 My Files** → tap the project
+2. Tap **🆕 Push Version**
+3. Bot suggests the next version tag automatically (e.g. v1.0.3 → v1.0.4)
+4. Add changelog or skip
+5. Choose content: text or GitHub repo
+6. Confirm → new version pushed on-chain
 
 ---
 
@@ -95,5 +101,7 @@ Pricing = Arweave storage cost + 20% protocol fee (minimum $0.10 USDC).
 
 📄 my-file.pdf
 🌍 Public
-ar://QmAbc123…
+🔗 ar://QmAbc123…
 ```
+
+You get the Arweave link and Basescan transaction link. Use the **🔗 Share** button to send a share card to anyone.
