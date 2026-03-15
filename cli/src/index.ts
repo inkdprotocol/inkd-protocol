@@ -161,7 +161,7 @@ function showHelp(): void {
     ${DIM}inkd agentd peers${RESET}
 
   ${BOLD}DOCS${RESET}    https://docs.inkdprotocol.com
-  ${BOLD}GITHUB${RESET}  https://github.com/inkdprotocol/inkd-protocol
+  ${BOLD}GITHUB${RESET}  https://github.com/inkdprotocol/inkdprotocol
 `)
 }
 

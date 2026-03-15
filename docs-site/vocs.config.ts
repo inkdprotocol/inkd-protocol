@@ -20,7 +20,7 @@ export default defineConfig({
   socials: [
     {
       icon: 'github',
-      link: 'https://github.com/inkdprotocol/inkd-protocol',
+      link: 'https://github.com/inkdprotocol/inkdprotocol',
     },
     {
       icon: 'x',
@@ -35,7 +35,7 @@ export default defineConfig({
     { text: 'Security',   link: '/security-audit' },
     { text: 'Buy $INKD',  link: 'https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07' },
     { text: 'npm',        link: 'https://www.npmjs.com/package/@inkd/sdk' },
-    { text: 'GitHub',     link: 'https://github.com/inkdprotocol/inkd-protocol' },
+    { text: 'GitHub',     link: 'https://github.com/inkdprotocol/inkdprotocol' },
   ],
 
   sidebar: [

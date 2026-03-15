@@ -45,12 +45,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/inkdprotocol/inkd-protocol.git",
+    "url": "https://github.com/inkdprotocol/inkdprotocol.git",
     "directory": "sdk"
   },
   "homepage": "https://inkdprotocol.com",
   "bugs": {
-    "url": "https://github.com/inkdprotocol/inkd-protocol/issues"
+    "url": "https://github.com/inkdprotocol/inkdprotocol/issues"
   },
   "peerDependencies": {
     "viem": ">=2.0.0"

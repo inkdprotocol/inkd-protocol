@@ -214,7 +214,7 @@ inkd agent lookup my-agent
 ## Development
 
 ```bash
-git clone https://github.com/inkdprotocol/inkd-protocol.git
+git clone https://github.com/inkdprotocol/inkdprotocol.git
 cd inkd-protocol/cli
 npm install
 npm run build

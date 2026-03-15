@@ -1,7 +1,7 @@
 # @inkd/sdk
 
 [![npm](https://img.shields.io/npm/v/@inkd/sdk?color=blue&logo=npm)](https://www.npmjs.com/package/@inkd/sdk)
-[![CI](https://github.com/inkdprotocol/inkd-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/inkdprotocol/inkd-protocol/actions/workflows/ci.yml)
+[![CI](https://github.com/inkdprotocol/inkdprotocol/actions/workflows/ci.yml/badge.svg)](https://github.com/inkdprotocol/inkdprotocol/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
 [![Built on Base](https://img.shields.io/badge/Built%20on-Base-0052ff?logo=ethereum)](https://base.org)
 

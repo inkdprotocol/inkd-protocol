@@ -91,7 +91,7 @@ async function showHomeMenu(ctx: MyContext) {
   const caption = '🫟 *inkd*\n\nStore your code on-chain. For agents and humans.\n\n' +
     '[🌐 inkdprotocol.com](https://inkdprotocol.com)\n' +
     '[𝕏 @inkdprotocol](https://twitter.com/inkdprotocol)\n' +
-    '[💻 GitHub](https://github.com/inkdprotocol/inkd-protocol)'
+    '[💻 GitHub](https://github.com/inkdprotocol/inkdprotocol)'
 
   try {
     await ctx.replyWithAnimation(INTRO_URL, {
@@ -316,7 +316,7 @@ bot.callbackQuery('upload_repo_start', async ctx => {
 // User picks a repo from the GitHub username list
 bot.callbackQuery(/^gh_repo:(.+)$/, async ctx => {
   await ctx.answerCallbackQuery()
-  const fullName = ctx.match[1] // e.g. "inkdprotocol/inkd-protocol"
+  const fullName = ctx.match[1] // e.g. "inkdprotocol/inkdprotocol"
   await handleGithubRepoSelected(ctx, fullName)
 })
 

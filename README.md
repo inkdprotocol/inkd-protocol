@@ -1,6 +1,6 @@
 # inkd Protocol
 
-[![CI](https://github.com/inkdprotocol/inkd-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/inkdprotocol/inkd-protocol/actions/workflows/ci.yml)
+[![CI](https://github.com/inkdprotocol/inkdprotocol/actions/workflows/ci.yml/badge.svg)](https://github.com/inkdprotocol/inkdprotocol/actions/workflows/ci.yml)
 [![X](https://img.shields.io/badge/X-@inkdprotocol-black?logo=x)](https://x.com/inkdprotocol)
 [![Base](https://img.shields.io/badge/Base-Mainnet-blue)](https://base.org)
 [![x402](https://img.shields.io/badge/x402-native-orange)](https://x402.org)
