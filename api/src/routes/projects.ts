@@ -438,7 +438,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
       // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
       // Fetch nonce once and increment manually to avoid race conditions on serverless
       const publicClient = buildPublicClient(cfg)
-      let nonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'pending' })
+      let nonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'latest' })
 
       if (cfg.treasuryAddress && paymentAmount) {
         const authData = getPaymentAuthorizationData(req)
@@ -629,7 +629,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
 
       // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
       // Fetch nonce once and increment manually to avoid race conditions on serverless
-      let versionNonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'pending' })
+      let versionNonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'latest' })
 
       if (cfg.treasuryAddress && paymentAmount) {
         const authData = getPaymentAuthorizationData(req)
