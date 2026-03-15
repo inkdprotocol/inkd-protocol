@@ -46,6 +46,23 @@ export interface ErrorResponse {
   }
 }
 
+// Known contract error selectors → human-readable messages
+const CONTRACT_ERROR_SELECTORS: Record<string, { code: string; message: string }> = {
+  '0x9e4b2685': { code: 'NAME_TAKEN',              message: 'Project name is already taken' },
+  '0xd13f0e39': { code: 'EMPTY_NAME',               message: 'Project name cannot be empty' },
+  '0xa9597f01': { code: 'NAME_TOO_LONG',            message: 'Project name is too long (max 64 chars)' },
+  '0xece5114d': { code: 'DESCRIPTION_TOO_LONG',     message: 'Description is too long' },
+  '0x9345107e': { code: 'EMPTY_ARWEAVE_HASH',       message: 'Arweave hash cannot be empty' },
+  '0x1e53dd91': { code: 'EMPTY_VERSION_TAG',        message: 'Version tag cannot be empty' },
+  '0xa8122cf6': { code: 'PROJECT_NOT_FOUND',        message: 'Project not found' },
+  '0x01f82199': { code: 'NOT_OWNER',                message: 'Not the project owner' },
+  '0x3acf1427': { code: 'NOT_OWNER_OR_COLLABORATOR', message: 'Not owner or collaborator' },
+  '0xdf269a67': { code: 'INSUFFICIENT_ALLOWANCE',   message: 'Insufficient USDC allowance' },
+  '0x7ad0269b': { code: 'INSUFFICIENT_FEE',         message: 'Insufficient fee' },
+  '0x94b7950d': { code: 'UNAUTHORIZED',             message: 'Unauthorized' },
+  '0xeb4111cd': { code: 'ZERO_ADDRESS',             message: 'Zero address not allowed' },
+}
+
 export function sendError(res: Response, err: unknown): void {
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
@@ -59,8 +76,19 @@ export function sendError(res: Response, err: unknown): void {
 
   // Unknown / RPC errors
   const message = err instanceof Error ? err.message : String(err)
-  const isRpc   = message.toLowerCase().includes('rpc') ||
-                  message.toLowerCase().includes('contract')
+
+  // Check for known contract error selectors
+  for (const [selector, info] of Object.entries(CONTRACT_ERROR_SELECTORS)) {
+    if (message.includes(selector)) {
+      res.status(400).json({
+        error: { code: info.code, message: info.message },
+      } satisfies ErrorResponse)
+      return
+    }
+  }
+
+  const isRpc = message.toLowerCase().includes('rpc') ||
+                message.toLowerCase().includes('contract')
 
   if (isRpc) {
     res.status(502).json({

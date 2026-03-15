@@ -104,6 +104,12 @@ type MyContext = Context & SessionFlavor<BotSession>
 
 export function formatApiError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err)
+  if (msg.includes('NAME_TAKEN') || msg.includes('NameTaken') || msg.includes('name_taken') || msg.includes('0x9e4b2685'))
+    return '❌ That project name is already taken. Try a different name.'
+  if (msg.includes('NAME_TOO_LONG') || msg.includes('NameTooLong'))
+    return '❌ Project name is too long (max 64 chars).'
+  if (msg.includes('EMPTY_NAME') || msg.includes('EmptyName'))
+    return '❌ Project name cannot be empty.'
   if ((msg.includes('insufficient') || msg.includes('balance')) && !msg.includes('callback') && !msg.includes('query'))
     return '❌ Not enough USDC. Add funds via /wallet → 📥 Add Funds.'
   if (msg.includes('gas') || msg.includes('ETH') || msg.includes('fee'))
@@ -1065,8 +1071,14 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
   }
 
   // Check balance before proceeding
-  const requiredUsdc = BigInt(pending.price.total)
-  if (!(await ensureSufficientBalance(ctx, requiredUsdc))) {
+  let repoBalanceOk = false
+  try {
+    repoBalanceOk = await ensureSufficientBalance(ctx, BigInt(pending.price.total))
+  } catch (balErr) {
+    console.error('[REPO-BALANCE-ERR]', balErr instanceof Error ? balErr.message : String(balErr))
+    repoBalanceOk = true // proceed optimistically — x402 will fail with real error if insufficient
+  }
+  if (!repoBalanceOk) {
     return // Don't clear session - user might fund wallet and retry
   }
 
@@ -1147,6 +1159,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
     )
     await ctx.reply('🎉', { reply_markup: keyboard })
   } catch (err) {
+    console.error('[REPO-UPLOAD-ERR]', err instanceof Error ? err.message : String(err))
     await ctx.api.editMessageText(
       ctx.chat!.id,
       statusMsg.message_id,
