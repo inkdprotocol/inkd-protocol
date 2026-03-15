@@ -178,6 +178,27 @@ bot.callbackQuery('nav_home', async ctx => {
   await showHomeMenu(ctx)
 })
 
+bot.callbackQuery('upload_menu', async ctx => {
+  await ctx.answerCallbackQuery()
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('You need a bot-managed wallet to upload.\n\nCreate one via /start → 🎓 Tutorial.', {
+      reply_markup: new InlineKeyboard().text('🏠 Home', 'nav_home'),
+    })
+    return
+  }
+  await ctx.reply(
+    '*What do you want to store?*\n\n' +
+    '📎 You can also send any *image, video, PDF or file* directly.',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: new InlineKeyboard()
+        .text('📝 Text / Note', 'upload_text_start').row()
+        .text('🐙 GitHub Repo', 'upload_repo_start').row()
+        .text('🏠 Home', 'nav_home'),
+    }
+  )
+})
+
 bot.callbackQuery('wallet_deposit', async ctx => {
   await ctx.answerCallbackQuery()
   const wallet = ctx.session.wallet
@@ -235,6 +256,10 @@ bot.callbackQuery('upload_text_start', async ctx => {
 
 bot.callbackQuery('skip_description', async ctx => {
   await ctx.answerCallbackQuery()
+  if (!ctx.session.upload) {
+    await showHomeMenu(ctx)
+    return
+  }
   ;(ctx.session.upload as any).awaitingDescription = false
   const type = ctx.session.upload?.type
   if (type === 'text') {
@@ -509,6 +534,41 @@ bot.on('message:document', async ctx => {
   }
 
   await beginFileUpload(ctx, doc.file_id, fileName, mimeType, fileSize)
+})
+
+bot.on('message:photo', async ctx => {
+  if (!ctx.session.wallet) {
+    await ctx.reply('Connect your wallet first with /start.')
+    return
+  }
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('⚠️ You connected an external wallet. Uploads require a bot-managed wallet.\n\nUse /start → "🆕 New Wallet" to create one.')
+    return
+  }
+  // Use highest-resolution photo
+  const photos = ctx.message.photo
+  const photo = photos[photos.length - 1]
+  const fileSize = photo.file_size ?? 0
+  await beginFileUpload(ctx, photo.file_id, `photo_${Date.now()}.jpg`, 'image/jpeg', fileSize)
+})
+
+bot.on('message:video', async ctx => {
+  if (!ctx.session.wallet) {
+    await ctx.reply('Connect your wallet first with /start.')
+    return
+  }
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('⚠️ You connected an external wallet. Uploads require a bot-managed wallet.\n\nUse /start → "🆕 New Wallet" to create one.')
+    return
+  }
+  const video = ctx.message.video
+  const fileSize = video.file_size ?? 0
+  if (fileSize > MAX_FILE_BYTES) {
+    await ctx.reply(`❌ Video too large (${(fileSize / 1024 / 1024).toFixed(1)} MB). Maximum is 50 MB.`)
+    return
+  }
+  const fileName = video.file_name ?? `video_${Date.now()}.mp4`
+  await beginFileUpload(ctx, video.file_id, fileName, video.mime_type ?? 'video/mp4', fileSize)
 })
 
 bot.on('message:text', async ctx => {
@@ -786,7 +846,6 @@ async function showWalletInfo(ctx: MyContext) {
   
   try {
     const balance = await getWalletBalance(wallet)
-    const walletType = isExternal ? '🔑 Connected (read-only)' : '🆕 Bot-managed'
     
     await ctx.reply(
       `*Your Wallet*\n\n` +
@@ -819,7 +878,7 @@ function shortenAddress(addr?: string) {
 function formatTimestamp(ts?: string | number) {
   if (!ts) return 'n/a'
   const num = typeof ts === 'string' ? Number(ts) : ts
-  return new Date(num * 1000).toLocaleString('de-DE', { timeZone: 'UTC' })
+  return new Date(num * 1000).toLocaleString('en-GB', { timeZone: 'UTC' })
 }
 
 function formatProjectSummary(project: ApiProject, latestArweave?: string) {
