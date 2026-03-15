@@ -248,7 +248,7 @@ export function buildDynamicVersionPriceMiddleware(cfg: X402Config): RequestHand
 
     res
       .status(402)
-      .set('payment-required', Buffer.from(JSON.stringify(payload)).toString('base64'))
+      .set('PAYMENT-REQUIRED', Buffer.from(JSON.stringify(payload)).toString('base64'))
       .json({})
   }
 }
