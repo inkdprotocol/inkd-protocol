@@ -116,6 +116,7 @@ export function formatApiError(err: unknown): string {
     return '❌ Request timed out. Try again.'
   if (msg.includes('invalid') || msg.includes('Invalid'))
     return `❌ Invalid input: ${msg.split(':').pop()?.trim()}`
+  console.error('[inkd-bot] Unhandled error:', err)
   return `❌ Something went wrong. Try again or use /cancel.`
 }
 

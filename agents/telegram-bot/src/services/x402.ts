@@ -76,11 +76,19 @@ function buildPayFetch(encryptedKey: string): typeof fetch {
 
 // ─── Upload to Arweave (free endpoint, no payment) ────────────────────────────
 
+const IRYS_NODE = process.env.IRYS_NODE_URL ?? 'https://node2.irys.xyz'
+const API_SIZE_LIMIT = 3 * 1024 * 1024 // 3 MB — stay under Vercel's 4.5 MB limit (base64 overhead ~33%)
+
 export async function uploadToArweave(
   data: Buffer,
   contentType: string,
   filename: string
 ): Promise<UploadResponse> {
+  // For large files, upload directly to Irys instead of through the API (Vercel 4.5MB limit)
+  if (data.length > API_SIZE_LIMIT) {
+    return uploadToIrysDirect(data, contentType, filename)
+  }
+
   const res = await fetch(`${API_URL}/v1/upload`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -93,10 +101,43 @@ export async function uploadToArweave(
 
   if (!res.ok) {
     const text = await res.text()
+    // Fallback to direct Irys on API error
+    if (res.status === 413) {
+      return uploadToIrysDirect(data, contentType, filename)
+    }
     throw new Error(`Upload to Arweave failed ${res.status}: ${text}`)
   }
 
   return res.json() as Promise<UploadResponse>
+}
+
+async function uploadToIrysDirect(
+  data: Buffer,
+  contentType: string,
+  filename: string
+): Promise<UploadResponse> {
+  const serverKey = process.env.BOT_SERVER_WALLET_KEY
+  if (!serverKey) throw new Error('BOT_SERVER_WALLET_KEY not set — cannot upload large files')
+
+  // @ts-ignore
+  const { default: Irys } = await import('@irys/sdk')
+  const irys = new Irys({ url: IRYS_NODE, token: 'ethereum', key: serverKey })
+  await irys.ready()
+
+  const tags = [
+    { name: 'Content-Type', value: contentType },
+    { name: 'App-Name', value: 'inkd-protocol' },
+    { name: 'File-Name', value: filename },
+  ]
+
+  const receipt = await irys.upload(data, { tags })
+  const txId = receipt.id as string
+  return {
+    hash: txId,
+    txId,
+    url: `https://arweave.net/${txId}`,
+    bytes: data.length,
+  }
 }
 
 // ─── Create project with x402 payment ─────────────────────────────────────────
