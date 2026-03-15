@@ -436,6 +436,10 @@ export function projectsRouter(cfg: ApiConfig): Router {
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
       // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
+      // Fetch nonce once and increment manually to avoid race conditions on serverless
+      const publicClient = buildPublicClient(cfg)
+      let nonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'pending' })
+
       if (cfg.treasuryAddress && paymentAmount) {
         const authData = getPaymentAuthorizationData(req)
         if (authData) {
@@ -450,6 +454,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
               authData.value, authData.validAfter, authData.validBefore,
               authData.nonce, authData.v, authData.r, authData.s,
             ],
+            nonce: nonce++,
           })
         }
         // 2. Split settled USDC (Buyback + Treasury)
@@ -458,6 +463,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
           abi:          TREASURY_ABI,
           functionName: 'settle',
           args:         [paymentAmount, 0n],
+          nonce: nonce++,
         })
       }
 
@@ -477,6 +483,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
           isAgent, agentEndpoint,
           metadataUri, BigInt(forkOf), accessManifestHash, tagsHashBytes,
         ],
+        nonce: nonce++,
       })
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
@@ -621,6 +628,9 @@ export function projectsRouter(cfg: ApiConfig): Router {
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
       // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
+      // Fetch nonce once and increment manually to avoid race conditions on serverless
+      let versionNonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'pending' })
+
       if (cfg.treasuryAddress && paymentAmount) {
         const authData = getPaymentAuthorizationData(req)
         if (authData) {
@@ -635,6 +645,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
               authData.value, authData.validAfter, authData.validBefore,
               authData.nonce, authData.v, authData.r, authData.s,
             ],
+            nonce: versionNonce++,
           })
         }
         // 2. Split settled USDC (Arweave cost + Buyback + Treasury)
@@ -647,6 +658,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
           abi:          TREASURY_ABI,
           functionName: 'settle',
           args:         [paymentAmount, arweaveCost],
+          nonce: versionNonce++,
         })
       }
 
@@ -659,6 +671,7 @@ export function projectsRouter(cfg: ApiConfig): Router {
         abi:          REGISTRY_ABI,
         functionName: 'pushVersionV2',
         args:         [BigInt(id), arweaveHash, versionTag, changelog, agentAddress, versionMetadataArweaveHash],
+        nonce: versionNonce++,
       })
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
