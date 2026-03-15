@@ -14,7 +14,8 @@ import { base } from 'viem/chains'
 // @ts-ignore
 import { wrapFetchWithPayment } from '../api/node_modules/@x402/fetch/dist/cjs/index.js'
 
-const PRIVATE_KEY   = '0x478c78b81be9cfa852cae02bc011dee7a2a5f8bd1b81420ba47d3a7f55b23049' as `0x${string}`
+const PRIVATE_KEY   = (process.env.E2E_PRIVATE_KEY ?? '') as `0x${string}`
+if (!PRIVATE_KEY) throw new Error('E2E_PRIVATE_KEY env var required')
 const API_URL       = 'https://api.inkdprotocol.com'
 const USDC_ADDRESS  = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`
 const TREASURY      = '0x23012C3EF1E95aBC0792c03671B9be33C239D449' as `0x${string}`
