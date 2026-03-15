@@ -50,7 +50,8 @@ const app = express()
 // ─── Global middleware ────────────────────────────────────────────────────────
 
 app.use(cors({ origin: cfg.corsOrigin }))
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
+app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }))
 app.use(express.urlencoded({ extended: false }))
 
 // Request logger (local dev only — skip on Vercel serverless)
