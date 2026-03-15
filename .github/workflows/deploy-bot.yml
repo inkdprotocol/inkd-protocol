@@ -20,10 +20,27 @@ jobs:
           script: |
             set -e
             cd /root/inkd-protocol-repo
-            git checkout -- .
+
+            # Stash only tracked source changes (never touches .env or data/)
+            git checkout -- agents/telegram-bot/src agents/telegram-bot/package.json agents/telegram-bot/package-lock.json agents/telegram-bot/tsconfig.json .github 2>/dev/null || true
             git pull origin main
+
             cd agents/telegram-bot
-            npm ci --omit=dev
+
+            # Backup current dist before building
+            if [ -d dist ]; then
+              rm -rf dist.bak
+              cp -r dist dist.bak
+            fi
+
+            # Install + build
+            npm ci
             npm run build
+
+            # Only restart if build succeeded (set -e handles this, but be explicit)
             pm2 restart inkd-bot
+
+            # Remove backup on success
+            rm -rf dist.bak
+
             echo "Deploy done: $(git log --oneline -1)"

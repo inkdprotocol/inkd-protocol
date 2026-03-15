@@ -1,0 +1,9 @@
+# Never commit secrets or user data
+.env
+.env.*
+data/
+dist/
+node_modules/
+*.db
+*.log
+dist.bak/
