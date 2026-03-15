@@ -60,7 +60,10 @@ const sqliteStorage = new SqliteStorage<BotSession>(sessionDbPath)
 
 bot.use(session({
   storage: sqliteStorage,
-  initial: () => ({})
+  initial: () => ({}),
+  // Disable per-update sequential locking — allows concurrent updates for same chat
+  // This prevents callback_query timeouts when a long operation is in progress
+  getSessionKey: (ctx) => ctx.chat?.id?.toString() ?? ctx.from?.id?.toString(),
 }))
 
 bot.use(async (ctx, next) => {
