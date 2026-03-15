@@ -407,6 +407,8 @@ bot.command('cancel', async ctx => {
   ctx.session.upload = undefined
   ctx.session.pendingChallenge = undefined
   ctx.session.pendingVersionPush = undefined
+  ctx.session.suggestedProjectId = undefined
+  ctx.session.tutorialStep = undefined
   await ctx.reply('Cancelled.', { reply_markup: new InlineKeyboard().text('🏠 Home', 'nav_home') })
 })
 
