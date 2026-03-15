@@ -34,7 +34,7 @@ jobs:
             fi
 
             # Install + build
-            npm ci
+            npm install
             npm run build
 
             # Only restart if build succeeded (set -e handles this, but be explicit)
