@@ -203,6 +203,36 @@ function serializeIndexedVersion(v: IndexerVersion) {
   }
 }
 
+// ─── Nonce-retry helper ───────────────────────────────────────────────────────
+
+/**
+ * Execute a block of contract writes, retrying once with a fresh nonce on nonce-too-low errors.
+ * Handles the Vercel serverless race where two instances read the same nonce simultaneously.
+ */
+async function withNonceRetry<T>(
+  getNonce: () => Promise<number>,
+  fn: (startNonce: number) => Promise<T>,
+  maxRetries = 3
+): Promise<T> {
+  let attempt = 0
+  while (true) {
+    const nonce = await getNonce()
+    try {
+      return await fn(nonce)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const isNonceTooLow = msg.includes('nonce too low') || msg.includes('Nonce provided') || msg.includes('nonce') && msg.includes('lower than')
+      if (isNonceTooLow && attempt < maxRetries) {
+        attempt++
+        // Small delay before retry to let the competing TX land
+        await new Promise(r => setTimeout(r, 200 * attempt))
+        continue
+      }
+      throw err
+    }
+  }
+}
+
 // ─── Router factory ───────────────────────────────────────────────────────────
 
 export function projectsRouter(cfg: ApiConfig): Router {
@@ -436,55 +466,61 @@ export function projectsRouter(cfg: ApiConfig): Router {
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
       // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
-      // Fetch nonce once and increment manually to avoid race conditions on serverless
       const publicClient = buildPublicClient(cfg)
-      let nonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'latest' })
 
-      if (cfg.treasuryAddress && paymentAmount) {
-        const authData = getPaymentAuthorizationData(req)
-        if (authData) {
-          // 1. Execute EIP-3009 signed USDC transfer: payer → Treasury
-          const usdcAddress = (process.env.USDC_ADDRESS ?? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as Address
-          await walletClient.writeContract({
-            address:      usdcAddress,
-            abi:          USDC_ABI,
-            functionName: 'transferWithAuthorization',
-            args: [
-              authData.from, authData.to,
-              authData.value, authData.validAfter, authData.validBefore,
-              authData.nonce, authData.v, authData.r, authData.s,
-            ],
-            nonce: nonce++,
-          })
-        }
-        // 2. Split settled USDC (Buyback + Treasury)
-        await walletClient.writeContract({
-          address:      cfg.treasuryAddress,
-          abi:          TREASURY_ABI,
-          functionName: 'settle',
-          args:         [paymentAmount, 0n],
-          nonce: nonce++,
-        })
-      }
-
-      // Encode tagsHash: empty string → zero bytes32, otherwise parse hex
+      // Encode tagsHash upfront
       const tagsHashBytes: `0x${string}` = (tagsHash && tagsHash.startsWith('0x'))
         ? tagsHash as `0x${string}`
         : `0x${'00'.repeat(32)}`
 
-      // Call createProjectV2 (settler-only, fee-free — x402 already settled above)
-      const hash = await walletClient.writeContract({
-        address:      registryAddress,
-        abi:          REGISTRY_ABI,
-        functionName: 'createProjectV2',
-        args: [
-          (payerAddress ?? walletAddress) as `0x${string}`,
-          name, description, license, isPublic, readmeHash,
-          isAgent, agentEndpoint,
-          metadataUri, BigInt(forkOf), accessManifestHash, tagsHashBytes,
-        ],
-        nonce: nonce++,
-      })
+      const { hash } = await withNonceRetry(
+        () => publicClient.getTransactionCount({ address: walletAddress, blockTag: 'pending' }),
+        async (startNonce) => {
+          let nonce = startNonce
+
+          if (cfg.treasuryAddress && paymentAmount) {
+            const authData = getPaymentAuthorizationData(req)
+            if (authData) {
+              // 1. Execute EIP-3009 signed USDC transfer: payer → Treasury
+              const usdcAddress = (process.env.USDC_ADDRESS ?? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as Address
+              await walletClient.writeContract({
+                address:      usdcAddress,
+                abi:          USDC_ABI,
+                functionName: 'transferWithAuthorization',
+                args: [
+                  authData.from, authData.to,
+                  authData.value, authData.validAfter, authData.validBefore,
+                  authData.nonce, authData.v, authData.r, authData.s,
+                ],
+                nonce: nonce++,
+              })
+            }
+            // 2. Split settled USDC (Buyback + Treasury)
+            await walletClient.writeContract({
+              address:      cfg.treasuryAddress,
+              abi:          TREASURY_ABI,
+              functionName: 'settle',
+              args:         [paymentAmount, 0n],
+              nonce: nonce++,
+            })
+          }
+
+          // Call createProjectV2 (settler-only, fee-free — x402 already settled above)
+          const txHash = await walletClient.writeContract({
+            address:      registryAddress,
+            abi:          REGISTRY_ABI,
+            functionName: 'createProjectV2',
+            args: [
+              (payerAddress ?? walletAddress) as `0x${string}`,
+              name, description, license, isPublic, readmeHash,
+              isAgent, agentEndpoint,
+              metadataUri, BigInt(forkOf), accessManifestHash, tagsHashBytes,
+            ],
+            nonce: nonce++,
+          })
+          return { hash: txHash }
+        }
+      )
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
@@ -627,52 +663,56 @@ export function projectsRouter(cfg: ApiConfig): Router {
       const { client: walletClient, address: walletAddress } =
         buildWalletClient(cfg, normalizePrivateKey(cfg.serverWalletKey))
 
-      // Settle X402 USDC payment: transferWithAuthorization → Treasury.settle()
-      // Fetch nonce once and increment manually to avoid race conditions on serverless
-      let versionNonce = await publicClient.getTransactionCount({ address: walletAddress, blockTag: 'latest' })
-
-      if (cfg.treasuryAddress && paymentAmount) {
-        const authData = getPaymentAuthorizationData(req)
-        if (authData) {
-          // 1. Execute EIP-3009 signed USDC transfer: payer → Treasury
-          const usdcAddress = (process.env.USDC_ADDRESS ?? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as Address
-          await walletClient.writeContract({
-            address:      usdcAddress,
-            abi:          USDC_ABI,
-            functionName: 'transferWithAuthorization',
-            args: [
-              authData.from, authData.to,
-              authData.value, authData.validAfter, authData.validBefore,
-              authData.nonce, authData.v, authData.r, authData.s,
-            ],
-            nonce: versionNonce++,
-          })
-        }
-        // 2. Split settled USDC (Arweave cost + Buyback + Treasury)
-        let arweaveCost = 0n
-        if (contentSize && contentSize > 0) {
-          try { arweaveCost = await getArweaveCostUsdc(contentSize) } catch { /* use 0 */ }
-        }
-        await walletClient.writeContract({
-          address:      cfg.treasuryAddress,
-          abi:          TREASURY_ABI,
-          functionName: 'settle',
-          args:         [paymentAmount, arweaveCost],
-          nonce: versionNonce++,
-        })
-      }
-
       // Use payer address (the agent who paid) as the on-chain agent address for attribution
       const agentAddress: Address = (payerAddress ?? '0x0000000000000000000000000000000000000000') as Address
 
-      // Call pushVersionV2 (settler-only, fee-free — x402 already settled above)
-      const hash = await walletClient.writeContract({
-        address:      registryAddress,
-        abi:          REGISTRY_ABI,
-        functionName: 'pushVersionV2',
-        args:         [BigInt(id), arweaveHash, versionTag, changelog, agentAddress, versionMetadataArweaveHash],
-        nonce: versionNonce++,
-      })
+      const { hash } = await withNonceRetry(
+        () => publicClient.getTransactionCount({ address: walletAddress, blockTag: 'pending' }),
+        async (startNonce) => {
+          let versionNonce = startNonce
+
+          if (cfg.treasuryAddress && paymentAmount) {
+            const authData = getPaymentAuthorizationData(req)
+            if (authData) {
+              // 1. Execute EIP-3009 signed USDC transfer: payer → Treasury
+              const usdcAddress = (process.env.USDC_ADDRESS ?? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913') as Address
+              await walletClient.writeContract({
+                address:      usdcAddress,
+                abi:          USDC_ABI,
+                functionName: 'transferWithAuthorization',
+                args: [
+                  authData.from, authData.to,
+                  authData.value, authData.validAfter, authData.validBefore,
+                  authData.nonce, authData.v, authData.r, authData.s,
+                ],
+                nonce: versionNonce++,
+              })
+            }
+            // 2. Split settled USDC (Arweave cost + Buyback + Treasury)
+            let arweaveCost = 0n
+            if (contentSize && contentSize > 0) {
+              try { arweaveCost = await getArweaveCostUsdc(contentSize) } catch { /* use 0 */ }
+            }
+            await walletClient.writeContract({
+              address:      cfg.treasuryAddress,
+              abi:          TREASURY_ABI,
+              functionName: 'settle',
+              args:         [paymentAmount, arweaveCost],
+              nonce: versionNonce++,
+            })
+          }
+
+          // Call pushVersionV2 (settler-only, fee-free — x402 already settled above)
+          const txHash = await walletClient.writeContract({
+            address:      registryAddress,
+            abi:          REGISTRY_ABI,
+            functionName: 'pushVersionV2',
+            args:         [BigInt(id), arweaveHash, versionTag, changelog, agentAddress, versionMetadataArweaveHash],
+            nonce: versionNonce++,
+          })
+          return { hash: txHash }
+        }
+      )
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
