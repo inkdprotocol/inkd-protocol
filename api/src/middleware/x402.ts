@@ -214,7 +214,7 @@ export function buildDynamicVersionPriceMiddleware(cfg: X402Config): RequestHand
 
     // If payment header is present → let x402 middleware handle verification
     // Check all case variants to be safe across different HTTP implementations
-    const hasPayment = !!(
+    console.log("[X402-DEBUG] req.headers:", JSON.stringify(Object.keys(req.headers))); const hasPayment = !!(
       req.header('x-payment') ?? req.header('X-PAYMENT') ??
       req.header('payment-signature') ?? req.header('PAYMENT-SIGNATURE')
     )
@@ -256,3 +256,6 @@ export function buildDynamicVersionPriceMiddleware(cfg: X402Config): RequestHand
       .json({})
   }
 }
+
+// TEMP DEBUG
+console.log('[X402-DEBUG] Headers:', JSON.stringify(Object.fromEntries(Object.entries({}).concat([]))))
