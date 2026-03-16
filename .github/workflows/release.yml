@@ -61,10 +61,44 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  npm-publish-agentkit:
+    name: Publish @inkd/agentkit to npm
+    runs-on: ubuntu-latest
+    needs: npm-publish-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install + Build AgentKit
+        run: cd agentkit && npm ci && npm run build
+      - name: Publish @inkd/agentkit
+        run: cd agentkit && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  npm-publish-mcp:
+    name: Publish @inkd/mcp to npm
+    runs-on: ubuntu-latest
+    needs: npm-publish-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install + Build MCP
+        run: cd mcp && npm ci && npm run build
+      - name: Publish @inkd/mcp
+        run: cd mcp && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [npm-publish-sdk, npm-publish-cli]
+    needs: [npm-publish-sdk, npm-publish-cli, npm-publish-agentkit, npm-publish-mcp]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -133,6 +167,8 @@ jobs:
 
             - `@inkd/sdk` ${{ github.ref_name }} → [npm](https://www.npmjs.com/package/@inkd/sdk)
             - `@inkd/cli` ${{ github.ref_name }} → [npm](https://www.npmjs.com/package/@inkd/cli)
+            - `@inkd/agentkit` ${{ github.ref_name }} → [npm](https://www.npmjs.com/package/@inkd/agentkit)
+            - `@inkd/mcp` ${{ github.ref_name }} → [npm](https://www.npmjs.com/package/@inkd/mcp)
 
             ## Contract ABIs
 

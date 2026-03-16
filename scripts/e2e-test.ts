@@ -2,8 +2,8 @@
  * Inkd Protocol — End-to-End Test (Base Mainnet)
  *
  * Tests the full x402 payment flow:
- *   1. POST /v1/projects — $5 USDC via x402 → creates project on-chain
- *   2. POST /v1/projects/:id/versions — $2 USDC via x402 → pushes version on-chain
+ *   1. POST /v1/projects — $0.10 USDC via x402 → creates project on-chain
+ *   2. POST /v1/projects/:id/versions — dynamic USDC via x402 → pushes version on-chain
  *   3. GET /v1/projects/:id — verifies project exists
  *   4. Verify Treasury received USDC + settle() was called
  */
@@ -45,7 +45,7 @@ async function main() {
   const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient)
 
   // ─── Step 1: Create project ──────────────────────────────────────────────
-  console.log(`\n📝 Step 1: POST /v1/projects ($5 USDC via x402)`)
+  console.log(`\n📝 Step 1: POST /v1/projects ($0.10 USDC via x402)`)
   const createRes = await fetchWithPayment(`${API_URL}/v1/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@ async function main() {
   console.log(`   TX:   ${project.txHash}`)
 
   // ─── Step 2: Push version ────────────────────────────────────────────────
-  console.log(`\n📦 Step 2: POST /v1/projects/${project.projectId}/versions ($2 USDC via x402)`)
+  console.log(`\n📦 Step 2: POST /v1/projects/${project.projectId}/versions (dynamic USDC via x402)`)
   const versionRes = await fetchWithPayment(`${API_URL}/v1/projects/${project.projectId}/versions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

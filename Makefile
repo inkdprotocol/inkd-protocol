@@ -31,13 +31,17 @@ install: ## Install all dependencies (npm + forge libs)
 	cd contracts && $(FORGE) install
 
 # ─────────────────────────────────────────────────────────────
-build: ## Build everything (contracts + SDK + CLI)
+build: ## Build everything (contracts + SDK + CLI + AgentKit + MCP)
 	@echo "→ Building contracts..."
 	cd contracts && $(FORGE) build --force
 	@echo "→ Building SDK..."
 	cd sdk && $(NPM) run build
 	@echo "→ Building CLI..."
 	cd cli && $(NPM) run build
+	@echo "→ Building AgentKit..."
+	cd agentkit && $(NPM) run build
+	@echo "→ Building MCP..."
+	cd mcp && $(NPM) run build
 	@echo "✅ All builds complete"
 
 build-contracts: ## Build Solidity contracts only
@@ -48,6 +52,12 @@ sdk-build: ## Build TypeScript SDK only
 
 cli-build: ## Build CLI only
 	cd cli && $(NPM) run build
+
+agentkit-build: ## Build AgentKit action provider
+	cd agentkit && $(NPM) run build
+
+mcp-build: ## Build MCP server
+	cd mcp && $(NPM) run build
 
 # ─────────────────────────────────────────────────────────────
 test: ## Run all tests (contracts + SDK)
