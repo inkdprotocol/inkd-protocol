@@ -91,7 +91,8 @@ async function showHomeMenu(ctx: MyContext) {
   const caption = '🫟 *inkd*\n\nStore your code on-chain. For agents and humans.\n\n' +
     '[🌐 inkdprotocol.com](https://inkdprotocol.com)\n' +
     '[𝕏 @inkdprotocol](https://twitter.com/inkdprotocol)\n' +
-    '[💻 GitHub](https://github.com/inkdprotocol/inkdprotocol)'
+    '[🐱 GitHub](https://github.com/inkdprotocol/inkdprotocol)\n' +
+    '[🪙 $INKD Token](https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07)'
 
   try {
     await ctx.replyWithAnimation(INTRO_URL, {
@@ -1584,7 +1585,7 @@ export async function start() {
     { command: 'estimate',     description: 'Calculate upload cost: /estimate 500kb' },
     { command: 'export_key',   description: 'Export your private key (bot wallets only)' },
     { command: 'tutorial',     description: 'Interactive guided tour' },
-    { command: 'links',        description: 'Website, socials, buy $INKD' },
+
     { command: 'cancel',       description: 'Cancel current action' },
     { command: 'help',         description: 'Show all commands' },
   ])
