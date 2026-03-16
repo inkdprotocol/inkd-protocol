@@ -347,7 +347,7 @@ bot.callbackQuery('upload_repo_start', async ctx => {
   await ctx.answerCallbackQuery()
   ctx.session.upload = { type: 'repo' }
   await ctx.reply(
-    '🐙 Send a GitHub username or profile link:\n\n`inkdprotocol` or `github.com/inkdprotocol`\n\nOr paste a direct repo link: `owner/repo`',
+    '🐙 *GitHub Upload*\n\nSend a GitHub profile or repo URL to continue.',
     { parse_mode: 'Markdown', reply_markup: new InlineKeyboard().text('❌ Cancel', 'nav_home') }
   )
 })

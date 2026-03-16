@@ -189,7 +189,7 @@ export async function beginTextUpload(ctx: MyContext) {
 export async function beginRepoUpload(ctx: MyContext) {
   ctx.session.upload = { type: 'repo' }
   await ctx.reply(
-    '🐙 *GitHub Repo Upload*\n\nSend a GitHub username or profile link to browse repos, or paste a repo directly:\n\n• `inkdprotocol` → lists repos\n• `github.com/inkdprotocol` → also works\n• `owner/repo` → direct upload\n• `https://github.com/owner/repo` → direct upload',
+    '🐙 *GitHub Upload*\n\nSend a GitHub profile or repo URL to continue.',
     { parse_mode: 'Markdown', reply_markup: new InlineKeyboard().text('❌ Cancel', 'nav_home') }
   )
 }
@@ -224,7 +224,7 @@ export async function handleGithubRepoSelected(ctx: MyContext, fullName: string)
   try {
     const parsed = parseRepoInput(fullName)
     if (!parsed) {
-      await ctx.reply('Invalid repo.', { reply_markup: new InlineKeyboard().text('🏠 Home', 'nav_home') })
+      await ctx.reply("That doesn't look like a valid GitHub URL. Try something like `github.com/username` or `github.com/owner/repo`.", { parse_mode: 'Markdown', reply_markup: new InlineKeyboard().text('↩️ Try again', 'upload_repo_start').text('🏠 Home', 'nav_home') })
       return
     }
 
