@@ -15,26 +15,24 @@ By default, all content uploaded to Arweave is public — anyone with the hash c
 Your content
      │
      ▼
-AES-256-GCM encrypt  ← random content key
+Derive encryption key: sha256(walletPrivateKey + "inkd-private-v1")
+     │
+     ▼
+AES-256-GCM encrypt with derived key
      │
      ▼
 Upload ciphertext to Arweave   ← publicly stored, unreadable without key
      │
      ▼
-ECIES-wrap content key        ← encrypted for each authorized wallet's public key
-     │
-     ▼
-Upload access manifest to Arweave  ← stores wrapped keys per wallet
-     │
-     ▼
-on-chain: version.metadataHash = manifest ar:// hash
+on-chain: version.contentHash = ar:// of encrypted blob
+          version.isPrivate   = true
 ```
 
-**What's on Arweave:** only encrypted bytes. No key, no plaintext ever leaves your device unencrypted.
+**What's on Arweave:** only encrypted bytes. The plaintext never leaves your device.
 
-**What's on-chain:** the hash of the access manifest — verifiable, immutable, zero plaintext.
+**What's on-chain:** the Arweave hash of the encrypted content and an `isPrivate` flag — no plaintext, no key.
 
-**Who can decrypt:** any wallet whose compressed secp256k1 public key is in the access manifest.
+**Who can decrypt:** only the wallet that uploaded — the key is deterministically derived from the wallet private key.
 
 ---
 
@@ -45,10 +43,10 @@ on-chain: version.metadataHash = manifest ar:// hash
 | Arweave node operator | Sees only ciphertext |
 | Inkd API server | Receives encrypted blob, never the key |
 | Third-party observer | AES-256-GCM ciphertext only |
-| Unauthorized wallet | ECIES key wrapping — can't unwrap without private key |
+| Unauthorized wallet | Key derived from owner's private key — unguessable without it |
 | Key loss | Content permanently inaccessible (no recovery) |
 
-Encryption: **AES-256-GCM** (content) + **ECIES secp256k1** (key wrapping via HKDF-SHA256).
+Encryption: **AES-256-GCM**. Key derivation: `sha256(walletPrivateKey + "inkd-private-v1")`.
 
 ---
 
@@ -62,6 +60,8 @@ The bot asks before every upload:
 ```
 
 Tap **🔒 Private** — the bot encrypts using your bot-managed wallet key before upload. One tap, no extra steps.
+
+For existing private projects, the bot shows a **🔓 View Content** button in the project detail view. Tapping it decrypts the content on the fly using your wallet key and sends it back to you in the chat.
 
 ---
 

@@ -70,7 +70,9 @@ owner/repo               → direct upload
 ## Public vs Private
 
 - **🌍 Public** — anyone with the Arweave link can view it
-- **🔒 Only me** — AES-256 encrypted before upload. Only your wallet can decrypt.
+- **🔒 Only me** — AES-256-GCM encrypted before upload. Key derived from your wallet private key (`sha256(key + "inkd-private-v1")`). Only your wallet can decrypt.
+
+For private projects, the project detail view shows a **🔓 View Content** button. Tap it to decrypt and retrieve your content directly in the chat.
 
 See [Private Uploads](/concepts/private-uploads) for the full security model.
 

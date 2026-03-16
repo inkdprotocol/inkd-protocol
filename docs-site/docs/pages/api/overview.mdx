@@ -19,6 +19,13 @@ The Inkd API is a REST API over HTTPS. Read operations are free and require no a
 | [Upload](/api/upload) | Upload files to Arweave |
 | [Errors](/api/errors) | Error codes reference |
 
+### Free read endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/buybacks` | Returns recent $INKD buyback events from The Graph. Each event includes USDC spent, $INKD received, and a Basescan link. |
+| `GET /v1/stats` | Protocol stats: project count, token supply, total versions, total USDC volume. |
+
 ---
 
 ## Authentication

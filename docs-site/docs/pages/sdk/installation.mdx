@@ -98,6 +98,25 @@ const client = new ProjectsClient({ privateKey: key })
 
 ---
 
+## Encryption utilities (v1.2.0+)
+
+`@inkd/sdk@1.2.0` exports `encryptForWallet` and `decryptForWallet` for AES-256-GCM encryption of private content. The key is derived from your wallet private key so only you can decrypt.
+
+```ts
+import { encryptForWallet, decryptForWallet } from "@inkd/sdk"
+
+// Encrypt before upload
+const encrypted = encryptForWallet(Buffer.from("my secret"), walletPrivateKey)
+
+// Decrypt after download
+const decrypted = decryptForWallet(encrypted, walletPrivateKey)
+console.log(decrypted.toString()) // "my secret"
+```
+
+These are the same primitives used internally by `pushPrivateVersion`. You can use them directly for custom encryption workflows before passing content to Arweave.
+
+---
+
 ## Next steps
 
 - [ProjectsClient](/sdk/projects-client) — Create projects, push versions, read the registry
