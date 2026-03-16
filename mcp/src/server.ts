@@ -135,8 +135,31 @@ const TOOLS = [
     },
   },
   {
+    name:        'inkd_get_latest_version',
+    description: 'Get the latest version of an inkd project. Returns arweaveHash, versionTag, and direct Arweave URL. Use this to check if a tool or library has been updated. Free.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'Numeric project ID' },
+      },
+      required: ['projectId'],
+    },
+  },
+  {
+    name:        'inkd_search_projects',
+    description: 'Search public inkd projects by name. Use to discover tools, libraries, or agents. Free.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Name or keyword to search for' },
+        limit: { type: 'number', description: 'Max results (default 10)' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name:        'inkd_upload',
-    description: 'Upload content to Arweave via Inkd. Returns an ar:// hash. Use this BEFORE inkd_push_version. For public projects: upload raw content. For private projects: encrypt first with inkd_encrypt_content, then upload the encrypted blob.',
+    description: 'Upload content to Arweave via Inkd. Returns an ar:// hash. Use this BEFORE inkd_push_version.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -293,6 +316,27 @@ async function main() {
             lines.push(`• #${a.id} ${a.name} — owner: ${a.owner}${a.agentEndpoint ? ` — endpoint: ${a.agentEndpoint}` : ''}`)
           }
 
+          return { content: [{ type: 'text', text: lines.join('\n') }] }
+        }
+
+        case 'inkd_get_latest_version': {
+          const { projectId } = args as any
+          const res = await globalThis.fetch(`${API_URL}/v1/projects/${projectId}/versions?limit=1`)
+          if (!res.ok) throw new Error(`getLatestVersion failed: ${res.statusText}`)
+          const { data } = await res.json() as any
+          if (!data?.length) return { content: [{ type: 'text', text: `No versions found for project #${projectId}.` }] }
+          const v = data[0]
+          return { content: [{ type: 'text', text: `Latest version of #${projectId}:\nTag: ${v.versionTag}\nArweave: https://arweave.net/${v.arweaveHash}\nPushed: ${v.pushedAt}` }] }
+        }
+
+        case 'inkd_search_projects': {
+          const { query, limit = 10 } = args as any
+          const qs = new URLSearchParams({ q: query, limit: String(limit) })
+          const res = await globalThis.fetch(`${API_URL}/v1/search/projects?${qs}`)
+          if (!res.ok) throw new Error(`searchProjects failed: ${res.statusText}`)
+          const { data, total } = await res.json() as any
+          const lines = [`Projects matching "${query}" (${total} total):\n`]
+          for (const p of data) lines.push(`• #${p.id} ${p.name} — ${p.versionCount} versions${p.isAgent ? ' [agent]' : ''}`)
           return { content: [{ type: 'text', text: lines.join('\n') }] }
         }
 

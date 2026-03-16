@@ -11,7 +11,9 @@ import {
   CreateProjectSchema,
   PushVersionSchema,
   GetProjectSchema,
+  GetLatestVersionSchema,
   ListAgentsSchema,
+  SearchProjectsSchema,
   INKD_ACTIONS,
 } from './actions.js'
 
@@ -56,7 +58,9 @@ export class InkdActionProvider {
       this.createProjectAction(),
       this.pushVersionAction(),
       this.getProjectAction(),
+      this.getLatestVersionAction(),
       this.listAgentsAction(),
+      this.searchProjectsAction(),
     ]
   }
 
@@ -65,7 +69,7 @@ export class InkdActionProvider {
   private createProjectAction() {
     return {
       name:        INKD_ACTIONS.CREATE_PROJECT,
-      description: `Register a new project on inkd Protocol on-chain. Locks 1 $INKD permanently. The agent's wallet address becomes the on-chain owner. Returns projectId, txHash, and owner address.`,
+      description: `Register a new project on inkd Protocol on Base. Costs $0.10 USDC via x402 (auto-paid). The agent wallet becomes the on-chain owner permanently. Returns projectId, txHash, owner address.`,
       schema:      CreateProjectSchema,
       invoke:      async (
         params: z.infer<typeof CreateProjectSchema>,
@@ -96,7 +100,7 @@ export class InkdActionProvider {
           throw new Error(`inkd createProject failed: ${JSON.stringify(err)}`)
         }
 
-        const result = await res.json()
+        const result = await res.json() as Record<string, unknown>
         return {
           success:   true,
           projectId: result.projectId,
@@ -113,7 +117,7 @@ export class InkdActionProvider {
   private pushVersionAction() {
     return {
       name:        INKD_ACTIONS.PUSH_VERSION,
-      description: `Push a new version to an existing inkd project. Costs 0.001 ETH. Content is referenced by Arweave or IPFS hash. Returns txHash and version tag.`,
+      description: `Upload content to Arweave and register the version on-chain. Costs Arweave storage + 20% markup (min $0.10 USDC), paid automatically via x402. Nothing is overwritten — all versions are permanent. Returns txHash, arweaveHash, versionTag.`,
       schema:      PushVersionSchema,
       invoke:      async (
         params: z.infer<typeof PushVersionSchema>,
@@ -128,9 +132,10 @@ export class InkdActionProvider {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
-              tag:          params.tag,
-              contentHash:  params.contentHash,
-              metadataHash: params.metadataHash ?? '',
+              versionTag:   params.tag,
+              arweaveHash:  params.contentHash,
+              changelog:    params.metadataHash ?? '',
+              contentSize:  0,
             }),
           }
         )
@@ -140,7 +145,7 @@ export class InkdActionProvider {
           throw new Error(`inkd pushVersion failed: ${JSON.stringify(err)}`)
         }
 
-        const result = await res.json()
+        const result = await res.json() as Record<string, unknown>
         return {
           success:   true,
           txHash:    result.txHash,
@@ -168,11 +173,56 @@ export class InkdActionProvider {
 
         if (!res.ok) throw new Error(`inkd getProject failed: ${res.statusText}`)
 
-        const { data }: { data: InkdProject } = await res.json()
+        const { data } = await res.json() as { data: InkdProject }
         return {
           success: true,
           project: data,
           message: `Project #${data.id}: "${data.name}" by ${data.owner}. ${data.versionCount} versions. License: ${data.license}.`,
+        }
+      },
+    }
+  }
+
+  // ─── inkd_get_latest_version ──────────────────────────────────────────────
+
+  private getLatestVersionAction() {
+    return {
+      name:        INKD_ACTIONS.GET_LATEST_VERSION,
+      description: `Get the latest version of an inkd project. Returns arweaveHash, versionTag, and Arweave URL. Use this to check if a tool or dependency has been updated. Free — no payment needed.`,
+      schema:      GetLatestVersionSchema,
+      invoke:      async (params: z.infer<typeof GetLatestVersionSchema>) => {
+        const res = await this.fetch(`${this.apiUrl}/v1/projects/${params.projectId}/versions?limit=1`)
+        if (!res.ok) throw new Error(`inkd getLatestVersion failed: ${res.statusText}`)
+        const { data } = await res.json() as { data: InkdVersion[] }
+        if (!data?.length) return { success: false, message: `No versions found for project #${params.projectId}.` }
+        const v = data[0]
+        return {
+          success:     true,
+          version:     v,
+          arweaveUrl:  `https://arweave.net/${v.arweaveHash}`,
+          message:     `Latest version of #${params.projectId}: ${v.versionTag} — https://arweave.net/${v.arweaveHash}`,
+        }
+      },
+    }
+  }
+
+  // ─── inkd_search_projects ─────────────────────────────────────────────────
+
+  private searchProjectsAction() {
+    return {
+      name:        INKD_ACTIONS.SEARCH_PROJECTS,
+      description: `Search public inkd projects by name. Use to discover tools, libraries, or agents registered on-chain. Free — no payment needed.`,
+      schema:      SearchProjectsSchema,
+      invoke:      async (params: z.infer<typeof SearchProjectsSchema>) => {
+        const qs = new URLSearchParams({ q: params.query, limit: String(params.limit ?? 10) })
+        const res = await this.fetch(`${this.apiUrl}/v1/search/projects?${qs}`)
+        if (!res.ok) throw new Error(`inkd searchProjects failed: ${res.statusText}`)
+        const { data, total } = await res.json() as { data: InkdProject[], total: string }
+        return {
+          success: true,
+          results: data,
+          total,
+          message: `Found ${total} projects matching "${params.query}". Showing ${data.length}.`,
         }
       },
     }
@@ -194,7 +244,7 @@ export class InkdActionProvider {
         const res = await this.fetch(`${this.apiUrl}/v1/agents?${qs}`)
         if (!res.ok) throw new Error(`inkd listAgents failed: ${res.statusText}`)
 
-        const { data, total }: { data: InkdProject[], total: string } = await res.json()
+        const { data, total } = await res.json() as { data: InkdProject[], total: string }
         return {
           success: true,
           agents:  data,
@@ -219,6 +269,7 @@ export class InkdActionProvider {
 
     try {
       // Try to use @x402/fetch with the agent's wallet
+      // @ts-ignore
       const { wrapFetchWithPayment } = await import('@x402/fetch')
       const { privateKeyToAccount }  = await import('viem/accounts')
       const { base, baseSepolia }    = await import('viem/chains')

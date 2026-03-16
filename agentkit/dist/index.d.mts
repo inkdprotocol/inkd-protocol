@@ -18,6 +18,16 @@ interface InkdProject {
     createdAt: string;
     versionCount: string;
 }
+interface InkdVersion {
+    versionIndex: string;
+    projectId: string;
+    versionTag: string;
+    arweaveHash: string;
+    changelog: string;
+    pushedAt: string;
+    pushedBy: string;
+    agentAddress: string;
+}
 
 /**
  * Action schemas for inkd AgentKit provider.
@@ -82,8 +92,27 @@ declare const INKD_ACTIONS: {
     readonly CREATE_PROJECT: "inkd_create_project";
     readonly PUSH_VERSION: "inkd_push_version";
     readonly GET_PROJECT: "inkd_get_project";
+    readonly GET_LATEST_VERSION: "inkd_get_latest_version";
     readonly LIST_AGENTS: "inkd_list_agents";
+    readonly SEARCH_PROJECTS: "inkd_search_projects";
 };
+declare const GetLatestVersionSchema: z.ZodObject<{
+    projectId: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    projectId: string;
+}, {
+    projectId: string;
+}>;
+declare const SearchProjectsSchema: z.ZodObject<{
+    query: z.ZodString;
+    limit: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    query: string;
+    limit?: number | undefined;
+}, {
+    query: string;
+    limit?: number | undefined;
+}>;
 
 /**
  * InkdActionProvider — AgentKit Action Provider for inkd Protocol
@@ -147,9 +176,9 @@ declare class InkdActionProvider {
         }>;
         invoke: (params: z.infer<typeof CreateProjectSchema>, context?: any) => Promise<{
             success: boolean;
-            projectId: any;
-            txHash: any;
-            owner: any;
+            projectId: unknown;
+            txHash: unknown;
+            owner: {} | undefined;
             message: string;
         }>;
     } | {
@@ -173,7 +202,7 @@ declare class InkdActionProvider {
         }>;
         invoke: (params: z.infer<typeof PushVersionSchema>, context?: any) => Promise<{
             success: boolean;
-            txHash: any;
+            txHash: unknown;
             projectId: string;
             tag: string;
             message: string;
@@ -198,6 +227,27 @@ declare class InkdActionProvider {
             message: string;
         }>;
     } | {
+        name: "inkd_get_latest_version";
+        description: string;
+        schema: z.ZodObject<{
+            projectId: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            projectId: string;
+        }, {
+            projectId: string;
+        }>;
+        invoke: (params: z.infer<typeof GetLatestVersionSchema>) => Promise<{
+            success: boolean;
+            message: string;
+            version?: undefined;
+            arweaveUrl?: undefined;
+        } | {
+            success: boolean;
+            version: InkdVersion;
+            arweaveUrl: string;
+            message: string;
+        }>;
+    } | {
         name: "inkd_list_agents";
         description: string;
         schema: z.ZodObject<{
@@ -216,10 +266,31 @@ declare class InkdActionProvider {
             total: string;
             message: string;
         }>;
+    } | {
+        name: "inkd_search_projects";
+        description: string;
+        schema: z.ZodObject<{
+            query: z.ZodString;
+            limit: z.ZodOptional<z.ZodNumber>;
+        }, "strip", z.ZodTypeAny, {
+            query: string;
+            limit?: number | undefined;
+        }, {
+            query: string;
+            limit?: number | undefined;
+        }>;
+        invoke: (params: z.infer<typeof SearchProjectsSchema>) => Promise<{
+            success: boolean;
+            results: InkdProject[];
+            total: string;
+            message: string;
+        }>;
     })[];
     private createProjectAction;
     private pushVersionAction;
     private getProjectAction;
+    private getLatestVersionAction;
+    private searchProjectsAction;
     private listAgentsAction;
     /**
      * Build an x402-enabled fetch if AgentKit wallet context is available.

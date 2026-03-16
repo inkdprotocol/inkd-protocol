@@ -19,11 +19,12 @@ export interface InkdProject {
 }
 
 export interface InkdVersion {
-  versionId:    string
+  versionIndex: string
   projectId:    string
-  tag:          string
-  contentHash:  string
-  metadataHash: string
+  versionTag:   string
+  arweaveHash:  string
+  changelog:    string
   pushedAt:     string
-  pusher:       string
+  pushedBy:     string
+  agentAddress: string
 }

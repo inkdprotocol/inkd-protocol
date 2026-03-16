@@ -1,6 +1,6 @@
 {
   "name": "@inkd/mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Model Context Protocol server for inkd Protocol",
   "bin": {
     "inkd-mcp": "./dist/server.js"

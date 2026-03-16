@@ -55,8 +55,19 @@ export const ListAgentsSchema = z.object({
 })
 
 export const INKD_ACTIONS = {
-  CREATE_PROJECT: 'inkd_create_project',
-  PUSH_VERSION:   'inkd_push_version',
-  GET_PROJECT:    'inkd_get_project',
-  LIST_AGENTS:    'inkd_list_agents',
+  CREATE_PROJECT:     'inkd_create_project',
+  PUSH_VERSION:       'inkd_push_version',
+  GET_PROJECT:        'inkd_get_project',
+  GET_LATEST_VERSION: 'inkd_get_latest_version',
+  LIST_AGENTS:        'inkd_list_agents',
+  SEARCH_PROJECTS:    'inkd_search_projects',
 } as const
+
+export const GetLatestVersionSchema = z.object({
+  projectId: z.string().describe('The numeric project ID to get the latest version for.'),
+})
+
+export const SearchProjectsSchema = z.object({
+  query: z.string().describe('Name or keyword to search for.'),
+  limit: z.number().int().min(1).max(50).optional().describe('Max results. Default: 10.'),
+})
