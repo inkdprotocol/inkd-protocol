@@ -9,6 +9,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.healthRouter = healthRouter;
 const express_1 = require("express");
+const graph_js_1 = require("../graph.js");
 const config_js_1 = require("../config.js");
 const clients_js_1 = require("../clients.js");
 const abis_js_1 = require("../abis.js");
@@ -102,10 +103,21 @@ function healthRouter(cfg) {
                 ]);
             }
             catch { /* RPC down — return nulls gracefully */ }
+            // Graph stats (totalUsdcVolume, totalVersions)
+            const graph = (0, graph_js_1.getGraphClient)();
+            let graphStats = null;
+            if (graph) {
+                graphStats = await graph.getStats().catch(() => null);
+            }
             res.setHeader('Cache-Control', 'public, max-age=60');
             res.json({
                 projects: projectCount !== null ? Number(projectCount) : null,
                 tokenSupply: totalSupply !== null ? (Number(totalSupply) / 1e18).toFixed(0) : null,
+                totalVersions: graphStats?.totalVersions ?? null,
+                totalUsdcVolume: graphStats?.totalUsdcVolume ?? null,
+                totalUsdcVolumeUsd: graphStats?.totalUsdcVolume
+                    ? `$${(Number(graphStats.totalUsdcVolume) / 1e6).toFixed(2)}`
+                    : null,
                 network: cfg.network,
                 contracts: {
                     registry: addrs.registry || null,

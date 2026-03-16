@@ -372,3 +372,6 @@ export type {
   EncryptedContent,
   WrappedKey,
 } from "./crypto.js";
+
+// AES-256-GCM wallet encryption
+export { encryptForWallet, decryptForWallet } from "./encryption.js";

@@ -16,6 +16,7 @@ export interface GraphProject {
         id: string;
     };
     isAgent: boolean;
+    isPublic: boolean;
     versionCount: string;
     createdAt: string;
     readmeHash: string;

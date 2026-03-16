@@ -1,12 +1,65 @@
 /**
  * @file encryption.ts
- * @description Lit Protocol integration for token-gated encryption.
+ * @description AES-256-GCM content encryption for private Inkd uploads,
+ *              plus Lit Protocol integration stub for token-gated encryption.
  *              V1 uses passthrough (no encryption). V2 will use Lit Protocol
  *              so only the InkdToken owner can decrypt inscribed data.
  */
 
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import type { EncryptionConfig, EncryptedData, Address } from "./types";
 import { EncryptionError } from "./errors";
+
+// ─── AES-256-GCM helpers (wallet-key based) ──────────────────────────────────
+
+/**
+ * Derive a 32-byte AES key from an EVM private key.
+ * Format: sha256(privateKey + "inkd-private-v1")
+ */
+function deriveAesKey(privateKey: string): Buffer {
+  return createHash("sha256")
+    .update(privateKey + "inkd-private-v1")
+    .digest();
+}
+
+/**
+ * Encrypt content with AES-256-GCM using a wallet private key.
+ * Wire format: [4B iv-len][iv][4B tag-len][tag][ciphertext]
+ *
+ * @param data - Raw content to encrypt
+ * @param privateKey - EVM wallet private key (hex, with or without 0x prefix)
+ * @returns Encrypted buffer ready for Arweave upload
+ */
+export function encryptForWallet(data: Buffer, privateKey: string): Buffer {
+  const key = deriveAesKey(privateKey);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  const ivLen = Buffer.alloc(4);  ivLen.writeUInt32BE(iv.length, 0);
+  const tagLen = Buffer.alloc(4); tagLen.writeUInt32BE(tag.length, 0);
+  return Buffer.concat([ivLen, iv, tagLen, tag, encrypted]);
+}
+
+/**
+ * Decrypt content encrypted by `encryptForWallet`.
+ *
+ * @param data - Encrypted buffer from Arweave
+ * @param privateKey - EVM wallet private key
+ * @returns Decrypted content buffer
+ */
+export function decryptForWallet(data: Buffer, privateKey: string): Buffer {
+  const key = deriveAesKey(privateKey);
+  let offset = 0;
+  const ivLen = data.readUInt32BE(offset); offset += 4;
+  const iv = data.subarray(offset, offset + ivLen); offset += ivLen;
+  const tagLen = data.readUInt32BE(offset); offset += 4;
+  const tag = data.subarray(offset, offset + tagLen); offset += tagLen;
+  const ciphertext = data.subarray(offset);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+}
 
 /**
  * Encryption provider interface.

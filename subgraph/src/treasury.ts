@@ -8,6 +8,7 @@ import {
   Deposited,
   Withdrawn,
   Received,
+  Settled,
 } from "../generated/InkdTreasury/InkdTreasury";
 import { TreasuryEvent } from "../generated/schema";
 import { loadOrCreateStats, buildId } from "./utils";
@@ -69,4 +70,15 @@ export function handleReceived(event: Received): void {
   ev.blockNumber = event.block.number;
   ev.transactionHash = event.transaction.hash;
   ev.save();
+}
+
+/**
+ * Settled — USDC payment processed via x402 (arweaveCost + markup split).
+ * Increments totalUsdcVolume on the global ProtocolStats singleton.
+ */
+export function handleSettled(event: Settled): void {
+  let stats = loadOrCreateStats(event.block.timestamp);
+  stats.totalUsdcVolume = stats.totalUsdcVolume.plus(event.params.total);
+  stats.lastUpdated = event.block.timestamp;
+  stats.save();
 }

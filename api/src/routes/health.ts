@@ -8,6 +8,7 @@
 
 import { Router } from 'express'
 import type { Address } from 'viem'
+import { getGraphClient } from '../graph.js'
 import { type ApiConfig, ADDRESSES } from '../config.js'
 import { buildPublicClient } from '../clients.js'
 import { REGISTRY_ABI, TOKEN_ABI } from '../abis.js'
@@ -106,11 +107,23 @@ export function healthRouter(cfg: ApiConfig): Router {
         ])
       } catch { /* RPC down — return nulls gracefully */ }
 
+      // Graph stats (totalUsdcVolume, totalVersions)
+      const graph = getGraphClient()
+      let graphStats = null
+      if (graph) {
+        graphStats = await graph.getStats().catch(() => null)
+      }
+
       res.setHeader('Cache-Control', 'public, max-age=60')
       res.json({
-        projects:    projectCount !== null ? Number(projectCount) : null,
-        tokenSupply: totalSupply  !== null ? (Number(totalSupply) / 1e18).toFixed(0) : null,
-        network:     cfg.network,
+        projects:         projectCount !== null ? Number(projectCount) : null,
+        tokenSupply:      totalSupply  !== null ? (Number(totalSupply) / 1e18).toFixed(0) : null,
+        totalVersions:    graphStats?.totalVersions ?? null,
+        totalUsdcVolume:  graphStats?.totalUsdcVolume ?? null,
+        totalUsdcVolumeUsd: graphStats?.totalUsdcVolume
+          ? `$${(Number(graphStats.totalUsdcVolume) / 1e6).toFixed(2)}`
+          : null,
+        network:          cfg.network,
         contracts: {
           registry: addrs.registry || null,
           treasury: addrs.treasury || null,
