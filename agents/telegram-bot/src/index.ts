@@ -1273,25 +1273,23 @@ function formatProjectSummary(project: ApiProject, latestArweave?: string) {
 
 function formatProjectDetails(project: ApiProject, versions: ApiVersion[]) {
   const vis = project.isPublic ? '🌍 Public' : '🔒 Private'
-  const header = [
-    `*${project.name}* #${project.id}`,
-    `${vis} · ${project.versionCount} version${Number(project.versionCount) !== 1 ? 's' : ''}`,
-    `Owner: \`${shortenAddress(project.owner)}\``,
-  ].join('\n')
+  const vCount = Number(project.versionCount)
+  const vLabel = vCount === 0 ? 'No versions yet' : `${vCount} version${vCount !== 1 ? 's' : ''}`
+  const header = `*${project.name}*\n${vis} · ${vLabel}`
+
   if (!versions.length) {
-    return `${header}\n\n_No versions yet. Push one to get started._`
+    return `${header}\n\n_Push your first version to store it on Arweave._`
   }
   const lines = versions.map(v => formatVersionLine(v))
   const body = lines.join('\n\n')
-  const versionCount = Number(project.versionCount)
-  const extra = versions.length < versionCount ? '\n\n_… and more versions._' : ''
+  const extra = versions.length < vCount ? '\n\n_… and more._' : ''
   return `${header}\n\n${body}${extra}`
 }
 
 function formatVersionLine(version: ApiVersion) {
   const date = formatTimestamp(version.pushedAt)
   const ar = version.arweaveHash
-  return `📦 *${version.versionTag}* · v${version.versionIndex}\n🗓 ${date}\n🔗 \`${ar}\``
+  return `📦 *${version.versionTag}* · ${date}\n\`${ar}\``
 }
 
 // ─── Tutorial ─────────────────────────────────────────────────────────────────
