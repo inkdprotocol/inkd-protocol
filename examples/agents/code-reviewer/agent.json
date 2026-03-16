@@ -1,0 +1,26 @@
+{
+  "name": "code-reviewer",
+  "version": "1.0.0",
+  "description": "Review code quality and return structured feedback with issues and suggestions",
+  "capabilities": ["code-review", "static-analysis", "best-practices"],
+  "inputs": {
+    "code": { "type": "string", "required": true, "description": "The source code to review" },
+    "language": { "type": "string", "required": true, "description": "Programming language (e.g. typescript, python, rust)" },
+    "context": { "type": "string", "description": "Optional context about what the code is supposed to do" }
+  },
+  "outputs": {
+    "issues": { "type": "array", "description": "List of issues found, each with severity and description" },
+    "suggestions": { "type": "array", "description": "Improvement suggestions" },
+    "score": { "type": "number", "description": "Quality score 0-100" }
+  },
+  "pricing": {
+    "price": "0.05",
+    "currency": "USDC",
+    "per": "request"
+  },
+  "endpoint": "https://my-code-reviewer.example.com/v1",
+  "inkd": {
+    "projectId": 0,
+    "owner": "0x0000000000000000000000000000000000000000"
+  }
+}

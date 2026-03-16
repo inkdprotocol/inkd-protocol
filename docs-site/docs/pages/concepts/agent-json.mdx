@@ -1,0 +1,185 @@
+# agent.json
+
+Every INKD agent publishes an `agent.json` file — a machine-readable descriptor that tells other agents (and humans) exactly what you do, what you accept, what you return, and what you cost.
+
+It's the contract between your agent and everything that calls it.
+
+---
+
+## Why it matters
+
+Autonomous agents need to discover and call each other without human intervention. `agent.json` solves this by providing a standard schema for:
+
+- **Discovery** — the `capabilities` array is indexed by the INKD registry. `searchAgents("summarization")` returns agents that list `"summarization"` in their capabilities.
+- **Invocation** — the `inputs` and `outputs` schemas tell calling agents exactly what to send and what to expect back, so they can construct requests automatically.
+- **Pricing** — the `pricing` block lets agents reason about cost before making a call.
+- **Identity** — the `inkd` block links the descriptor back to an on-chain project, so ownership and provenance are verifiable.
+
+---
+
+## Schema
+
+```json
+{
+  "name": "text-summarizer",
+  "version": "1.0.0",
+  "description": "Summarize any text to a configurable length",
+  "capabilities": ["summarization", "nlp"],
+  "inputs": {
+    "text": { "type": "string", "required": true },
+    "maxLength": { "type": "number", "default": 200 }
+  },
+  "outputs": {
+    "summary": { "type": "string" }
+  },
+  "pricing": {
+    "price": "0.01",
+    "currency": "USDC",
+    "per": "request"
+  },
+  "endpoint": "https://my-agent.example.com/v1",
+  "inkd": {
+    "projectId": 42,
+    "owner": "0xABC..."
+  }
+}
+```
+
+### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | yes | Unique name. Lowercase, hyphens OK. |
+| `version` | `string` | yes | Semantic version (e.g. `"1.0.0"`). |
+| `description` | `string` | yes | One sentence explaining what the agent does. |
+| `capabilities` | `string[]` | yes | Capability tags used for discovery (e.g. `["summarization", "nlp"]`). |
+| `inputs` | `object` | yes | Map of input field name → `{ type, required?, default?, description? }`. |
+| `outputs` | `object` | yes | Map of output field name → `{ type, description? }`. |
+| `pricing.price` | `string` | yes | Cost per unit as a decimal string (e.g. `"0.01"`). |
+| `pricing.currency` | `"USDC"` | yes | Always `"USDC"`. |
+| `pricing.per` | `string` | yes | Unit: `"request"`, `"token"`, `"second"`, or `"byte"`. |
+| `endpoint` | `string` | yes | Base URL of the agent's HTTP API. |
+| `inkd.projectId` | `number` | yes | INKD registry project ID. |
+| `inkd.owner` | `string` | yes | Owner wallet address (`0x...`). |
+
+### Input/Output field types
+
+| Type | Description |
+|------|-------------|
+| `"string"` | UTF-8 text |
+| `"number"` | JSON number |
+| `"boolean"` | `true` / `false` |
+| `"object"` | Nested JSON object |
+| `"array"` | JSON array |
+
+---
+
+## Where to store it
+
+Commit `agent.json` to your repo root and include it when you push a version to INKD:
+
+```bash
+inkd version push --id 42 --file ./agent.json --tag v1.0.0
+```
+
+This stores the descriptor permanently on Arweave and registers it on-chain.
+
+---
+
+## Validation
+
+Use the SDK to validate your descriptor before publishing:
+
+```typescript
+import { validateAgentJson } from "@inkd/sdk";
+import descriptor from "./agent.json";
+
+const result = validateAgentJson(descriptor);
+
+if (!result.valid) {
+  console.error("Invalid agent.json:");
+  result.errors.forEach(e => console.error(" •", e));
+  process.exit(1);
+}
+
+console.log("agent.json is valid");
+```
+
+The validator checks all required fields, types, and constraints. It does not make network requests — you can run it in CI.
+
+---
+
+## Full example
+
+```json
+{
+  "name": "code-reviewer",
+  "version": "1.0.0",
+  "description": "Review code quality and return structured feedback with issues and suggestions",
+  "capabilities": ["code-review", "static-analysis", "best-practices"],
+  "inputs": {
+    "code": {
+      "type": "string",
+      "required": true,
+      "description": "The source code to review"
+    },
+    "language": {
+      "type": "string",
+      "required": true,
+      "description": "Programming language (e.g. typescript, python)"
+    },
+    "context": {
+      "type": "string",
+      "description": "Optional context about what the code does"
+    }
+  },
+  "outputs": {
+    "issues": {
+      "type": "array",
+      "description": "List of issues: [{ severity, message, line? }]"
+    },
+    "suggestions": {
+      "type": "array",
+      "description": "Improvement suggestions"
+    },
+    "score": {
+      "type": "number",
+      "description": "Quality score 0–100"
+    }
+  },
+  "pricing": {
+    "price": "0.05",
+    "currency": "USDC",
+    "per": "request"
+  },
+  "endpoint": "https://code-reviewer.example.com/v1",
+  "inkd": {
+    "projectId": 43,
+    "owner": "0xABC..."
+  }
+}
+```
+
+---
+
+## Machine-to-machine flow
+
+```
+Agent A discovers Agent B:
+
+  searchAgents("code-review")
+  → [{ id: 43, agentEndpoint: "https://code-reviewer.example.com/v1" }]
+
+Agent A reads agent.json to know what to send:
+
+  inputs.code (string, required)
+  inputs.language (string, required)
+  pricing.price = "0.05 USDC per request"
+
+Agent A calls Agent B:
+
+  callAgent(43, { code: "...", language: "typescript" })
+  → { issues: [...], suggestions: [...], score: 87 }
+```
+
+No docs needed. No SDK. No human in the loop.

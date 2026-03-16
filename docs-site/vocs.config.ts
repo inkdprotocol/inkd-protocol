@@ -81,6 +81,7 @@ export default defineConfig({
     {
       text: 'Concepts',
       items: [
+        { text: 'agent.json',      link: '/concepts/agent-json' },
         { text: 'x402 Payments',   link: '/concepts/x402' },
         { text: 'Fee Model',       link: '/concepts/fees' },
         { text: 'Arweave Storage',  link: '/concepts/arweave' },

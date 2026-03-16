@@ -457,6 +457,54 @@ export class ProjectsClient {
     return { ...result, metadataHash: manifestUpload.hash, isPrivate: true }
   }
 
+  // ─── Agent Discovery & Calling ───────────────────────────────────────────────
+
+  /**
+   * Search for agents on the INKD registry by capability or keyword.
+   *
+   * @example
+   * ```ts
+   * const agents = await client.searchAgents("summarization");
+   * // [{ id: 42, name: "text-summarizer", agentEndpoint: "https://..." }]
+   * ```
+   */
+  async searchAgents(query: string, options: { limit?: number } = {}): Promise<Project[]> {
+    const params = new URLSearchParams({ q: query, isAgent: "true" });
+    if (options.limit) params.set("limit", String(options.limit));
+    const res  = await fetch(`${this.apiUrl}/v1/search/projects?${params}`);
+    const body = await res.json() as { data?: Project[] } & Record<string, unknown>;
+    if (!res.ok) throw new Error(`searchAgents failed [${res.status}]`);
+    return (body["data"] ?? body) as Project[];
+  }
+
+  /**
+   * Call a registered agent by project ID.
+   *
+   * Fetches the project from the registry, reads `agentEndpoint`, and
+   * POSTs `input` to `<endpoint>/` as JSON.
+   *
+   * @example
+   * ```ts
+   * const result = await client.callAgent(42, { text: "Hello world", maxLength: 50 });
+   * ```
+   */
+  async callAgent(projectId: number | string, input: Record<string, unknown>): Promise<unknown> {
+    const project = await this.getProject(Number(projectId));
+    if (!project.agentEndpoint) {
+      throw new Error(`Project ${projectId} has no agentEndpoint registered`);
+    }
+    const res = await fetch(project.agentEndpoint, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`callAgent failed [${res.status}]: ${text}`);
+    }
+    return res.json();
+  }
+
   /**
    * Upload content to Arweave via the Inkd API.
    * Returns an `ar://` hash to use in pushVersion.

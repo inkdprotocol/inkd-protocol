@@ -12,6 +12,19 @@ export type {
   Project, UploadResult, UploadOptions,
 } from "./ProjectsClient.js";
 
+// ─── Agent Discovery & Calling (standalone helpers) ──────────────────────────
+export { searchAgents, callAgent } from "./agent-helpers.js";
+
+// ─── agent.json Standard ─────────────────────────────────────────────────────
+export { validateAgentJson } from "./agent-json.js";
+export type {
+  AgentJson,
+  AgentJsonField,
+  AgentJsonPricing,
+  AgentJsonInkd,
+  AgentJsonValidationResult,
+} from "./agent-json.js";
+
 // ─── Agent Vault (wallet-key credential storage) ─────────────────────────────
 export { AgentVault } from "./vault.js";
 

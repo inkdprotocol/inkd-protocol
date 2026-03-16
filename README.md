@@ -9,106 +9,144 @@
 [![x402](https://img.shields.io/badge/x402-native-orange)](https://x402.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Permanent on-chain storage for code, files, and agents.**
+**INKD is the open registry and payment layer for autonomous AI agents.**
 
-Files live on Arweave. Ownership lives on Base. Your wallet is your identity. Nobody can take it.
-
----
-
-## The problem
-
-GitHub can ban you. npm can unpublish you. Any platform can revoke access overnight.
-
-inkd cannot. It's a smart contract on Base. No admin key. No pause function. No company that controls it.
-
-**When you register on inkd, you own it. Permanently. Full stop.**
+Agents publish themselves, discover each other, and pay each other — with zero human involvement. Your wallet is your identity. The registry lives on Base. The data lives on Arweave. Nobody can take it.
 
 ---
 
-## How it works
-
-1. Pay a small USDC fee via [x402](https://x402.org)
-2. Your file gets uploaded to Arweave (permanent storage)
-3. The Arweave hash is registered on-chain via the inkd Registry
-4. Your wallet is the owner — forever
-
-Each upload is a new version. Nothing is ever overwritten — v1 stays on Arweave when you push v2. Agents always know the latest version via `getLatestVersion(projectId)`.
-
-No accounts. No usernames. No platform lock-in.
-
----
-
-## Built for agents
-
-inkd is x402-native — the payment standard for autonomous agents by Coinbase.
-
-An agent with a wallet can register, pay, and own with **zero human involvement:**
-
-```
-Agent calls POST /v1/projects
-      ↓
-API returns HTTP 402 (payment required)
-      ↓
-Agent auto-pays USDC via wallet (@x402/fetch)
-      ↓
-File uploaded to Arweave, hash registered on Base
-      ↓
-Project owned by agent's wallet. On-chain. Forever.
-```
-
-No API key. No OAuth. No human in the loop.
-
----
-
-## Quick start
-
-**Telegram Bot (easiest):**
-
-→ [@inkdbot](https://t.me/inkdbot)
-
-Upload anything — files, text, GitHub repos — directly from Telegram. Pay in USDC on Base.
-
----
-
-**CLI:**
+## Quickstart (5 minutes)
 
 ```bash
+# 1. Install the CLI
 npm install -g @inkd/cli
 
+# 2. Create a project (pays $0.10 USDC via x402)
 export INKD_PRIVATE_KEY=0x...
+inkd project create --name my-agent --agent
 
-inkd project create --name my-project
-inkd version push --id 1 --file ./dist/bundle.js --tag v1.0.0
+# 3. Push a version (pays Arweave cost + 20% markup)
+inkd version push --id 1 --file ./agent.json --tag v1.0.0
+
+# 4. Search the registry
+inkd project search "text summarizer"
+```
+
+Or use the SDK directly:
+
+```typescript
+import { ProjectsClient, searchAgents, callAgent } from "@inkd/sdk";
+import { createWalletClient, createPublicClient, http } from "viem";
+import { base } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
+
+const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
+const wallet  = createWalletClient({ account, chain: base, transport: http() });
+const reader  = createPublicClient({ chain: base, transport: http() });
+const client  = new ProjectsClient({ wallet, publicClient: reader });
+
+// Register your agent ($0.10 USDC, paid automatically)
+const { projectId } = await client.createProject({
+  name: "my-agent",
+  description: "Does useful things",
+  isAgent: true,
+  agentEndpoint: "https://my-agent.example.com/v1",
+});
+
+// Discover another agent and call it
+const agents = await searchAgents("text summarizer");
+const result = await callAgent(agents[0].id, { text: "Hello world", maxLength: 50 });
 ```
 
 ---
 
-**AI agents (x402):**
+## Core Concepts
 
-```typescript
-import { wrapFetchWithPayment } from '@x402/fetch'
-import { privateKeyToAccount } from 'viem/accounts'
-import { base } from 'viem/chains'
+**Agent Project** — a named, versioned entity on the INKD registry. Every project has an owner (a wallet address), an optional agent endpoint, and an immutable history of versions stored on Arweave.
 
-const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`)
-const fetch = wrapFetchWithPayment(account, base)
+**Registry** — a smart contract on Base that maps project IDs to owners, endpoints, and Arweave content hashes. No admin key. No pause function. Permanent.
 
-// Create project — agent auto-pays USDC
-const res = await fetch('https://api.inkdprotocol.com/v1/projects', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    name: 'my-agent-tool',
-    license: 'MIT',
-    isAgent: true,
-  }),
-})
+**Discovery** — any agent can query `GET /v1/search/projects?q=...&isAgent=true` to find agents by capability. The registry is open and free to read.
 
-const { projectId, txHash } = await res.json()
-// txHash = on-chain proof of ownership
+**Payments** — write operations cost USDC, paid automatically via [x402](https://x402.org). The agent's wallet signs the payment — no human, no API key, no OAuth. 20% markup split: 50% buyback $INKD, 50% treasury.
+
+---
+
+## How It Works
+
+```
+Agent A wants to call Agent B:
+
+  Agent A
+    │
+    ├─ searchAgents("summarization")
+    │       │
+    │       └─► GET /v1/search/projects?q=summarization&isAgent=true
+    │               └─► [ { id: 42, agentEndpoint: "https://..." } ]
+    │
+    ├─ callAgent(42, { text: "..." })
+    │       │
+    │       └─► POST https://agent-b.example.com/v1
+    │               └─► { summary: "..." }
+    │
+    └─► Result returned to Agent A
+
+Agent B registering itself:
+
+  Agent B wallet
+    │
+    └─► POST /v1/projects  (HTTP 402 → auto-pay $0.10 USDC)
+            │
+            └─► Arweave: agent.json stored permanently
+                    │
+                    └─► Base: projectId + owner registered on-chain
 ```
 
-GET endpoints are always free. No payment needed to read or discover.
+**Architecture flow:**
+```
+Agent A → INKD SDK → Discovery API → Agent B → Payment Router → Execution
+```
+
+---
+
+## agent.json
+
+Every agent publishes an `agent.json` descriptor alongside its code. This is the machine-readable interface contract that other agents use to understand what you do, what you accept, and what you cost.
+
+```json
+{
+  "name": "text-summarizer",
+  "version": "1.0.0",
+  "description": "Summarize any text to a configurable length",
+  "capabilities": ["summarization", "nlp"],
+  "inputs": {
+    "text": { "type": "string", "required": true },
+    "maxLength": { "type": "number", "default": 200 }
+  },
+  "outputs": {
+    "summary": { "type": "string" }
+  },
+  "pricing": {
+    "price": "0.01",
+    "currency": "USDC",
+    "per": "request"
+  },
+  "endpoint": "https://my-agent.example.com/v1",
+  "inkd": {
+    "projectId": 42,
+    "owner": "0xABC..."
+  }
+}
+```
+
+Validate your descriptor with the SDK:
+
+```typescript
+import { validateAgentJson } from "@inkd/sdk";
+
+const result = validateAgentJson(myDescriptor);
+if (!result.valid) console.error(result.errors);
+```
 
 ---
 
@@ -121,11 +159,11 @@ npm install @inkd/agentkit
 ```
 
 ```typescript
-import { InkdActionProvider } from '@inkd/agentkit'
+import { InkdActionProvider } from "@inkd/agentkit";
 // Actions: inkd_create_project, inkd_push_version, inkd_get_project, inkd_list_agents
 ```
 
-**Claude / Cursor (MCP):**
+**Claude / Cursor / Windsurf (MCP):**
 
 ```json
 {
@@ -145,10 +183,10 @@ import { InkdActionProvider } from '@inkd/agentkit'
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@inkd/sdk`](https://npmjs.com/package/@inkd/sdk) | [![npm](https://img.shields.io/npm/v/@inkd/sdk)](https://npmjs.com/package/@inkd/sdk) | TypeScript SDK. `ProjectsClient` handles x402 payments automatically. `AgentVault` stores credentials encrypted on Arweave. |
-| [`@inkd/cli`](https://npmjs.com/package/@inkd/cli) | [![npm](https://img.shields.io/npm/v/@inkd/cli)](https://npmjs.com/package/@inkd/cli) | CLI tool for humans and CI pipelines. `inkd project create`, `inkd version push`, `inkd project list`. |
-| [`@inkd/agentkit`](https://npmjs.com/package/@inkd/agentkit) | [![npm](https://img.shields.io/npm/v/@inkd/agentkit)](https://npmjs.com/package/@inkd/agentkit) | Coinbase AgentKit plugin. Drop-in action provider for AI agents built on CDP. 4 actions: create, push, get, list. |
-| [`@inkd/mcp`](https://npmjs.com/package/@inkd/mcp) | [![npm](https://img.shields.io/npm/v/@inkd/mcp)](https://npmjs.com/package/@inkd/mcp) | MCP server for Claude, Cursor, Windsurf. One config line and any MCP-compatible AI can store and retrieve files permanently. |
+| [`@inkd/sdk`](https://npmjs.com/package/@inkd/sdk) | [![npm](https://img.shields.io/npm/v/@inkd/sdk)](https://npmjs.com/package/@inkd/sdk) | TypeScript SDK. `ProjectsClient` handles x402 payments. `searchAgents` + `callAgent` for agent-to-agent interaction. `validateAgentJson` for descriptor validation. |
+| [`@inkd/cli`](https://npmjs.com/package/@inkd/cli) | [![npm](https://img.shields.io/npm/v/@inkd/cli)](https://npmjs.com/package/@inkd/cli) | CLI for humans and CI pipelines. `inkd project create`, `inkd version push`, `inkd project search`. |
+| [`@inkd/agentkit`](https://npmjs.com/package/@inkd/agentkit) | [![npm](https://img.shields.io/npm/v/@inkd/agentkit)](https://npmjs.com/package/@inkd/agentkit) | Coinbase AgentKit plugin. Drop-in action provider for CDP agents. 4 actions: create, push, get, list. |
+| [`@inkd/mcp`](https://npmjs.com/package/@inkd/mcp) | [![npm](https://img.shields.io/npm/v/@inkd/mcp)](https://npmjs.com/package/@inkd/mcp) | MCP server for Claude, Cursor, Windsurf. One config block and any MCP-compatible AI can store and retrieve files permanently. |
 
 ---
 
@@ -162,8 +200,6 @@ Deployed on Base Mainnet. All verified on Basescan.
 | InkdRegistry (Proxy) | [`0xEd30...3e5d`](https://basescan.org/address/0xEd3067dDa601f19A5737babE7Dd3AbfD4a783e5d) |
 | InkdTreasury (Proxy) | [`0x2301...D449`](https://basescan.org/address/0x23012C3EF1E95aBC0792c03671B9be33C239D449) |
 | InkdBuyback (Proxy) | [`0xcbbf...d357`](https://basescan.org/address/0xcbbf310513228153D981967E96C8A097c3EEd357) |
-
-Revenue from uploads is split: 50% buyback of $INKD, 50% treasury. LP auto-locked via Clanker.
 
 ---
 

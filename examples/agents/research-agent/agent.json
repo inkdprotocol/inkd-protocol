@@ -1,0 +1,26 @@
+{
+  "name": "research-agent",
+  "version": "1.0.0",
+  "description": "Search for information on a topic and return a structured research summary",
+  "capabilities": ["research", "search", "information-retrieval"],
+  "inputs": {
+    "query": { "type": "string", "required": true, "description": "The research question or topic" },
+    "depth": { "type": "string", "default": "brief", "description": "Research depth: brief | detailed" },
+    "maxSources": { "type": "number", "default": 3, "description": "Maximum number of sources to include" }
+  },
+  "outputs": {
+    "summary": { "type": "string", "description": "Research summary" },
+    "keyPoints": { "type": "array", "description": "List of key findings" },
+    "sources": { "type": "array", "description": "List of source references" }
+  },
+  "pricing": {
+    "price": "0.10",
+    "currency": "USDC",
+    "per": "request"
+  },
+  "endpoint": "https://my-research-agent.example.com/v1",
+  "inkd": {
+    "projectId": 0,
+    "owner": "0x0000000000000000000000000000000000000000"
+  }
+}
