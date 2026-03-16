@@ -1,9 +1,12 @@
 const MAX_REPO_BYTES = 100 * 1024 * 1024 // 100 MB
 
-const GH_HEADERS = {
+const GH_TOKEN = process.env['GITHUB_TOKEN'] ?? process.env['GH_TOKEN']
+
+const GH_HEADERS: Record<string, string> = {
   'User-Agent': 'inkd-bot/1.0',
   Accept: 'application/vnd.github+json',
   'X-GitHub-Api-Version': '2022-11-28',
+  ...(GH_TOKEN ? { Authorization: `Bearer ${GH_TOKEN}` } : {}),
 }
 
 export interface RepoRef {
