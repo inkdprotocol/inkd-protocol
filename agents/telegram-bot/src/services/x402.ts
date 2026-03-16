@@ -5,6 +5,7 @@ import { createWalletClient, createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { decryptPrivateKey } from './wallet.js'
+import { encryptContent } from '../encryption.js'
 
 const { wrapFetchWithPayment, x402Client } = require('@x402/fetch') as {
   wrapFetchWithPayment: (f: typeof fetch, c: unknown) => typeof fetch
@@ -42,6 +43,7 @@ export interface UploadResponse {
   txId: string
   url: string
   bytes: number
+  encrypted: boolean
 }
 
 // ─── Payment-aware fetch builder ──────────────────────────────────────────────
@@ -84,18 +86,22 @@ const TURBO_DEPOSIT = '0x6A0A10FFD285c971B841bee8892878c0d583Bf67'
 export async function uploadToArweave(
   data: Buffer,
   contentType: string,
-  filename: string
+  filename: string,
+  privateKey?: string
 ): Promise<UploadResponse> {
+  const payload = privateKey ? encryptContent(data, privateKey) : data
+  const encrypted = !!privateKey
+
   // For large files, upload directly via Turbo instead of through the API (Vercel 4.5MB limit)
-  if (data.length > API_SIZE_LIMIT) {
-    return uploadViaTurbo(data, contentType, filename)
+  if (payload.length > API_SIZE_LIMIT) {
+    return uploadViaTurbo(payload, contentType, filename, encrypted)
   }
 
   const res = await fetch(`${API_URL}/v1/upload`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      data: data.toString('base64'),
+      data: payload.toString('base64'),
       contentType,
       filename,
     }),
@@ -105,12 +111,13 @@ export async function uploadToArweave(
     const text = await res.text()
     // Fallback to direct Turbo on API error
     if (res.status === 413) {
-      return uploadViaTurbo(data, contentType, filename)
+      return uploadViaTurbo(payload, contentType, filename, encrypted)
     }
     throw new Error(`Upload to Arweave failed ${res.status}: ${text}`)
   }
 
-  return res.json() as Promise<UploadResponse>
+  const result = await res.json() as UploadResponse
+  return { ...result, encrypted }
 }
 
 /**
@@ -120,7 +127,8 @@ export async function uploadToArweave(
 async function uploadViaTurbo(
   data: Buffer,
   contentType: string,
-  filename: string
+  filename: string,
+  encrypted = false
 ): Promise<UploadResponse> {
   const serverKey = process.env.BOT_SERVER_WALLET_KEY
   if (!serverKey) throw new Error('BOT_SERVER_WALLET_KEY not set — cannot upload large files')
@@ -159,6 +167,7 @@ async function uploadViaTurbo(
     txId,
     url: `https://arweave.net/${txId}`,
     bytes: data.length,
+    encrypted,
   }
 }
 

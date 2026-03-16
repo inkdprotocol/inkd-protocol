@@ -28,6 +28,7 @@ import {
 } from './services/uploads'
 import { SqliteStorage, hideProject, unhideProject, getHiddenProjects, initAgentMonitor, getLastCheckedAt, setLastCheckedAt, hasSeenVersion, markVersionSeen, cleanupOldVersions } from './services/session'
 import { generateWallet, encryptPrivateKey, decryptPrivateKey, getWalletBalance } from './services/wallet'
+import { decryptContent } from './encryption'
 
 import { listProjectsByOwner, getProjectById, listVersions, getVersion, searchProjects, findProjectByOwnerAndName, getUploadPriceEstimate, type ApiProject, type ApiVersion } from './services/api'
 
@@ -1151,6 +1152,13 @@ bot.callbackQuery(/^project:(\d+)$/, async ctx => {
         .text('👁 Preview', `preview:${projectId}:${versions[0].versionIndex}`)
         .row()
     }
+
+    if (!project.isPublic && versions.length > 0 && ctx.session.encryptedKey) {
+      const latestVersion = versions[versions.length - 1]
+      keyboard
+        .text('🔓 View Content', `view_content:${projectId}:${latestVersion.versionIndex}`)
+        .row()
+    }
     
     for (const v of versions) {
       keyboard
@@ -1241,6 +1249,52 @@ bot.callbackQuery(/^preview:(\d+):(\d+)$/, async ctx => {
   } catch (err) {
     await ctx.reply(formatApiError(err))
   }
+})
+
+bot.callbackQuery(/^view_content:(\d+):(\d+)$/, async ctx => {
+  await ctx.answerCallbackQuery()
+  const projectId = Number(ctx.match[1])
+  const versionIndex = Number(ctx.match[2])
+
+  if (!ctx.session.encryptedKey) {
+    await ctx.reply('A bot-managed wallet is required to decrypt private content.')
+    return
+  }
+
+  try {
+    const version = await getVersion(projectId, versionIndex)
+    if (!version) { await ctx.reply('Version not found.'); return }
+
+    const url = `https://arweave.net/${version.arweaveHash}`
+    const statusMsg = await ctx.reply('⏳ Fetching and decrypting…')
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Arweave responded with HTTP ${res.status}`)
+
+    const rawBuf = Buffer.from(await res.arrayBuffer())
+    const privateKey = decryptPrivateKey(ctx.session.encryptedKey)
+    const decrypted = decryptContent(rawBuf, privateKey)
+    const text = decrypted.toString('utf8').slice(0, 500).replace(/`/g, "'")
+    const truncated = decrypted.length > 500
+
+    await ctx.api.deleteMessage(ctx.chat!.id, statusMsg.message_id)
+    await ctx.reply(
+      `🔓 *Decrypted Content* — v${versionIndex} · \`${version.versionTag}\`\n\n\`\`\`\n${text}${truncated ? '\n…' : ''}\n\`\`\``,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: new InlineKeyboard().text('🗑 Delete this message', `delete_msg:${ctx.chat!.id}`),
+      }
+    )
+  } catch (err) {
+    await ctx.reply(formatApiError(err))
+  }
+})
+
+bot.callbackQuery(/^delete_msg:(\d+)$/, async ctx => {
+  await ctx.answerCallbackQuery()
+  try {
+    await ctx.api.deleteMessage(ctx.chat!.id, ctx.callbackQuery.message!.message_id)
+  } catch { /* message may already be deleted */ }
 })
 
 bot.callbackQuery(/^download:(\d+):(\d+)$/, async ctx => {

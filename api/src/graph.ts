@@ -17,6 +17,7 @@ export interface GraphProject {
   description: string
   owner: { id: string }
   isAgent: boolean
+  isPublic: boolean
   versionCount: string
   createdAt: string
   readmeHash: string
@@ -102,7 +103,7 @@ export class GraphClient {
     const data = await this.query<{ projects: GraphProject[] }>(`
       query GetProjects($skip: Int!, $first: Int!) {
         projects(skip: $skip, first: $first, orderBy: createdAt, orderDirection: desc, ${filter}) {
-          id name description isAgent versionCount createdAt readmeHash metadataUri
+          id name description isAgent isPublic versionCount createdAt readmeHash metadataUri
           owner { id }
           forkOf { id }
         }
@@ -117,7 +118,7 @@ export class GraphClient {
     const data = await this.query<{ project: GraphProject | null }>(`
       query GetProject($id: ID!) {
         project(id: $id) {
-          id name description isAgent versionCount createdAt readmeHash metadataUri
+          id name description isAgent isPublic versionCount createdAt readmeHash metadataUri
           owner { id }
           forkOf { id }
         }
@@ -132,7 +133,7 @@ export class GraphClient {
     const data = await this.query<{ projects: GraphProject[] }>(`
       query GetProjectByName($name: String!) {
         projects(where: { name: $name }, first: 1) {
-          id name description isAgent versionCount createdAt readmeHash metadataUri
+          id name description isAgent isPublic versionCount createdAt readmeHash metadataUri
           owner { id }
           forkOf { id }
         }
@@ -152,7 +153,7 @@ export class GraphClient {
           orderBy: versionCount
           orderDirection: desc
         ) {
-          id name description isAgent versionCount createdAt readmeHash metadataUri
+          id name description isAgent isPublic versionCount createdAt readmeHash metadataUri
           owner { id }
         }
       }
@@ -186,7 +187,7 @@ export class GraphClient {
     const data = await this.query<{ projects: GraphProject[] }>(`
       query GetProjectsByOwner($owner: String!, $first: Int!) {
         projects(where: { owner: $owner }, first: $first, orderBy: createdAt, orderDirection: desc) {
-          id name description isAgent versionCount createdAt readmeHash metadataUri
+          id name description isAgent isPublic versionCount createdAt readmeHash metadataUri
           owner { id }
         }
       }

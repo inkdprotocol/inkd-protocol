@@ -164,7 +164,7 @@ function serializeGraphProject(p: GraphProject) {
     license:       '',
     readmeHash:    p.readmeHash,
     owner:         p.owner?.id ?? '',
-    isPublic:      true,
+    isPublic:      p.isPublic ?? true,
     isAgent:       p.isAgent,
     agentEndpoint: '',
     createdAt:     p.createdAt,
