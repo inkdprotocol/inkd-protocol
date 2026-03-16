@@ -3,6 +3,7 @@ import http from 'node:http'
 import dotenv from 'dotenv'
 import fs from 'node:fs'
 import path from 'node:path'
+import QRCode from 'qrcode'
 import { createChallenge, recoverWalletFromSignature } from './services/auth'
 import { 
   beginTextUpload, 
@@ -278,14 +279,15 @@ bot.callbackQuery('wallet_deposit', async ctx => {
   await ctx.answerCallbackQuery()
   const wallet = ctx.session.wallet
   if (!wallet) { await ctx.reply('No wallet.'); return }
-  await ctx.reply(
-    `*Add funds to your wallet*\n\n` +
-    `Send USDC or ETH on Base to:\n\`${wallet}\``,
-    {
-      parse_mode: 'Markdown',
-      reply_markup: new InlineKeyboard().text('🏠 Home', 'nav_home'),
-    }
-  )
+  
+  // Generate QR code for the wallet address
+  const qrBuffer = await QRCode.toBuffer(`ethereum:${wallet}`, { type: 'png', width: 300 })
+  
+  await ctx.replyWithPhoto(new InputFile(qrBuffer, 'wallet-qr.png'), {
+    caption: `*Add funds to your wallet*\n\nSend USDC or ETH on Base to:\n\`${wallet}\``,
+    parse_mode: 'Markdown',
+    reply_markup: new InlineKeyboard().text('🏠 Home', 'nav_home'),
+  })
 })
 
 bot.callbackQuery('wallet_withdraw', async ctx => {
@@ -1080,7 +1082,7 @@ bot.callbackQuery(/^project:(\d+)$/, async ctx => {
       .text('◀️ My Files', 'home_files')
       .text('🏠 Home', 'nav_home')
 
-    await ctx.reply(message, { reply_markup: keyboard })
+    await ctx.reply(message, { parse_mode: 'Markdown', reply_markup: keyboard })
   } catch (err) {
     await ctx.reply(formatApiError(err))
   }
@@ -1270,26 +1272,26 @@ function formatProjectSummary(project: ApiProject, latestArweave?: string) {
 }
 
 function formatProjectDetails(project: ApiProject, versions: ApiVersion[]) {
+  const vis = project.isPublic ? '🌍 Public' : '🔒 Private'
   const header = [
-    `📂 ${project.name} (#${project.id})`,
-    `Owner: ${shortenAddress(project.owner)}`,
-    `Total versions: ${project.versionCount}`
+    `*${project.name}* #${project.id}`,
+    `${vis} · ${project.versionCount} version${Number(project.versionCount) !== 1 ? 's' : ''}`,
+    `Owner: \`${shortenAddress(project.owner)}\``,
   ].join('\n')
   if (!versions.length) {
-    return `${header}\n\nNo versions found.`
+    return `${header}\n\n_No versions yet. Push one to get started._`
   }
   const lines = versions.map(v => formatVersionLine(v))
   const body = lines.join('\n\n')
   const versionCount = Number(project.versionCount)
-  const extra = versions.length < versionCount ? '\n… more versions exist.' : ''
+  const extra = versions.length < versionCount ? '\n\n_… and more versions._' : ''
   return `${header}\n\n${body}${extra}`
 }
 
 function formatVersionLine(version: ApiVersion) {
   const date = formatTimestamp(version.pushedAt)
   const ar = version.arweaveHash
-  const link = `https://arweave.net/${ar}`
-  return `v${version.versionIndex} · ${version.versionTag} (${date})\nArweave: ${ar}\n${link}`
+  return `📦 *${version.versionTag}* · v${version.versionIndex}\n🗓 ${date}\n🔗 \`${ar}\``
 }
 
 // ─── Tutorial ─────────────────────────────────────────────────────────────────
@@ -1562,7 +1564,15 @@ bot.catch(err => {
   const msg = err.message ?? String(err)
   // Ignore expired callback query errors (Telegram 60s timeout)
   if (msg.includes('query is too old') || msg.includes('query ID is invalid')) return
-  console.error('Bot error:', err)
+  console.error('[inkd-bot] Bot error:', msg)
+})
+
+// Prevent unhandled rejections from crashing the process
+process.on('unhandledRejection', (reason) => {
+  console.error('[inkd-bot] Unhandled rejection (swallowed):', reason instanceof Error ? reason.message : reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[inkd-bot] Uncaught exception (swallowed):', err.message)
 })
 
 // ─── Start ────────────────────────────────────────────────────────────────────
