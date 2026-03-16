@@ -23,7 +23,6 @@ export interface GraphProject {
     forkOf: {
         id: string;
     } | null;
-    string: any;
 }
 export interface GraphVersion {
     id: string;

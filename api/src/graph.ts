@@ -22,7 +22,6 @@ export interface GraphProject {
   readmeHash: string
   metadataUri: string
   forkOf: { id: string } | null
- : string
 }
 
 export interface GraphVersion {
