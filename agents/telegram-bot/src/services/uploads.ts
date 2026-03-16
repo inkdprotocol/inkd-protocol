@@ -165,7 +165,7 @@ function celebrate() { return CELEBRATIONS[Math.floor(Math.random() * CELEBRATIO
 export function buildSuccessKeyboard(txHash: string, arweaveHash: string, isPublic = true): InlineKeyboard {
   const tweetText = isPublic
     ? encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\nhttps://arweave.net/${arweaveHash}`)
-    : encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\nhttps://t.me/inkdbot`)
+    : encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\ntry it yourself → https://t.me/inkdbot`)
   const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`
 
   return new InlineKeyboard()
