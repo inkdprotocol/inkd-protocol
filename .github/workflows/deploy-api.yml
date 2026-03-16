@@ -1,0 +1,35 @@
+name: Deploy API to Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'vercel.json'
+
+jobs:
+  deploy:
+    name: Deploy to Vercel Production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install API dependencies
+        run: cd api && npm ci
+
+      - name: Build API
+        run: cd api && npm run build
+
+      - name: Deploy to Vercel Production
+        run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
