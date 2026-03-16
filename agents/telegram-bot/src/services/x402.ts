@@ -168,7 +168,7 @@ async function uploadViaTurbo(
 async function topUpTurboWithUsdc(privateKey: string, amount: bigint): Promise<void> {
   const { ethers } = await import('ethers')
   
-  const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
+  const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL ?? 'https://base.llamarpc.com')
   const wallet = new ethers.Wallet(privateKey, provider)
   
   const usdc = new ethers.Contract(
