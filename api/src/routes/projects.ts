@@ -265,7 +265,10 @@ export function projectsRouter(cfg: ApiConfig): Router {
           const total = await graph.getProjectCount().catch(() => rows.length)
           res.setHeader('Cache-Control', 'public, max-age=10')
           return res.json({ data: rows.map(serializeGraphProject), total: total.toString(), offset, limit, source: 'graph' })
-        } catch { /* fall through */ }
+        } catch (graphErr) {
+          console.error('[graph] getProjects failed:', graphErr instanceof Error ? graphErr.message : graphErr)
+          /* fall through to RPC */
+        }
       }
 
       // 2. Indexer fallback
