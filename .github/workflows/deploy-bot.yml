@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'agents/telegram-bot/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
