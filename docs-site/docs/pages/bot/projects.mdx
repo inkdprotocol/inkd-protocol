@@ -1,25 +1,37 @@
 ---
 title: Projects & Discovery
-description: View, search, browse trending projects, and share via the inkd Telegram bot.
+description: View, manage, search, and share your projects via the inkd Telegram bot.
 ---
 
 # Projects & Discovery
 
-## Your projects
+## My Files
 
-```
-/my_projects
-```
+Tap **📁 My Files** from the home screen to see all your uploaded projects. Each project shows its visibility (🌍 public / 🔒 private) and version count.
 
-Lists your most recent projects. Tap any project to open it.
+## Project details
 
-## History
+Tap any project to open it:
 
-```
-/history
-```
+- Owner address + version count
+- **🆕 Push Version** — push a new version with auto-suggested tag
+- **🔗 Share** — formatted share card with Arweave link
+- **👁 Preview** — first 400 chars of the latest version (text files only)
+- **⬇ v1.x** — download any version directly
+- **🗑 Hide** — remove from My Files (archived, not deleted)
 
-Recent uploads with direct share links.
+## Archiving projects
+
+Tap **🗑 Hide** on any project to archive it. It disappears from My Files but stays on-chain forever.
+
+To see archived projects, tap **📦 Archived** at the bottom of My Files. Tap **↩️ Restore** on any entry to bring it back.
+
+## Share on X
+
+After every successful upload, a **🐦 Share on X** button appears. Tap it to open X with a pre-filled tweet:
+
+- **Public uploads** include a direct Arweave link to the file
+- **Private uploads** include a CTA to try the bot
 
 ## Search
 
@@ -27,7 +39,7 @@ Recent uploads with direct share links.
 /search <name>
 ```
 
-Search public projects by name. Returns results with **📂 Details** buttons.
+Search public projects by name.
 
 ## Trending
 
@@ -47,27 +59,13 @@ Live stats: total project count, token supply, network.
 
 ---
 
-## Project details
-
-Tap any project to see:
-
-- Owner address + version count
-- **👁 Preview** — first 400 chars of the latest version (text files)
-- **🆕 Push Version** — push a new version with auto-suggested tag
-- **🔗 Share** — formatted share card with Arweave link
-- **⬇ v1.0.0** — download any version directly
-
 ## Download
 
 Tap **⬇ v1.x** on any version. The bot fetches the file from Arweave and sends it in chat. Files over 48 MB get a direct Arweave link.
 
 ## Preview
 
-Tap **👁 Preview** to see the first 400 characters of a text file inline — without leaving the chat or opening Arweave.
-
-## Share
-
-Tap **🔗 Share** for a formatted card with project name, version count, Arweave link, and Basescan link. Forward it anywhere.
+Tap **👁 Preview** to see the first 400 characters of a text file inline — without leaving the chat.
 
 ## Inline search
 
