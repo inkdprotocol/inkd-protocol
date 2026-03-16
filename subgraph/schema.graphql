@@ -234,3 +234,28 @@ type Account @entity {
   " Versions pushed by this account "
   versionsPushed: [Version!]! @derivedFrom(field: "pushedBy")
 }
+
+# ─── Buyback ──────────────────────────────────────────────────────────────────
+
+"""
+A $INKD buyback event — USDC → $INKD via Uniswap V3.
+"""
+type BuybackEvent @entity {
+  " Tx hash + log index "
+  id: ID!
+
+  " Caller address "
+  caller: Bytes!
+
+  " USDC spent (6 decimals) "
+  usdcIn: BigInt!
+
+  " $INKD received (18 decimals) "
+  inkdOut: BigInt!
+
+  " Block timestamp "
+  timestamp: BigInt!
+
+  " Transaction hash "
+  txHash: Bytes!
+}

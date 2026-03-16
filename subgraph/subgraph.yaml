@@ -103,3 +103,25 @@ dataSources:
         - event: Received(indexed address,uint256)
           handler: handleReceived
       file: ./src/treasury.ts
+
+  # ── InkdBuyback ─────────────────────────────────────────────────────────────
+  - kind: ethereum
+    name: InkdBuyback
+    network: base
+    source:
+      address: "0xcbbf310513228153D981967E96C8A097c3EEd357"
+      abi: InkdBuyback
+      startBlock: 43000000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - BuybackEvent
+      abis:
+        - name: InkdBuyback
+          file: ./abis/InkdBuyback.json
+      eventHandlers:
+        - event: BuybackExecuted(indexed address,uint256,uint256)
+          handler: handleBuybackExecuted
+      file: ./src/buyback.ts
