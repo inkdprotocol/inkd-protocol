@@ -950,15 +950,34 @@ bot.callbackQuery('export_key_confirm', async ctx => {
   
   try {
     const privateKey = decryptPrivateKey(ctx.session.encryptedKey)
-    await ctx.reply(
+    const sent = await ctx.reply(
       `🔑 *Your Private Key*\n\n` +
       `\`${privateKey}\`\n\n` +
       `⚠️ Save this immediately. Delete this message after saving.\n` +
       `Never share this with anyone.`,
-      { parse_mode: 'Markdown' }
+      {
+        parse_mode: 'Markdown',
+        reply_markup: new InlineKeyboard()
+          .text('🗑 Delete this message', `delete_msg:${ctx.chat!.id}`),
+      }
     )
+    // Store message_id in callback data via a separate handler
+    // We embed the message_id in the callback after sending
+    await ctx.api.editMessageReplyMarkup(ctx.chat!.id, sent.message_id, {
+      reply_markup: new InlineKeyboard()
+        .text('🗑 Delete this message', `delete_msg:${sent.message_id}`),
+    })
   } catch (err) {
     await ctx.reply('Failed to decrypt key. Please contact support.')
+  }
+})
+
+bot.callbackQuery(/^delete_msg:(\d+)$/, async ctx => {
+  await ctx.answerCallbackQuery()
+  try {
+    await ctx.api.deleteMessage(ctx.chat!.id, Number(ctx.match[1]))
+  } catch {
+    await ctx.answerCallbackQuery({ text: 'Could not delete message.' })
   }
 })
 
