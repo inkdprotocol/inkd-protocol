@@ -155,6 +155,13 @@ export async function ensureSufficientBalance(
 
 // ─── Success Buttons Helper ───────────────────────────────────────────────────
 
+const CELEBRATIONS = [
+  '🫟 Inked forever.',
+  '🫟 On-chain. Permanent. Yours.',
+  '🫟 Nobody can take this down.',
+  '🫟 Stored forever on Arweave.',
+]
+function celebrate() { return CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)] }
 export function buildSuccessKeyboard(txHash: string, arweaveHash: string, isPublic = true): InlineKeyboard {
   const tweetText = isPublic
     ? encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\nhttps://arweave.net/${arweaveHash}`)
@@ -565,7 +572,7 @@ export async function handlePushConfirm(ctx: MyContext) {
         `📦 Version: ${versionResult.versionTag}\n\n` +
         `Use /my_projects to view your projects.`
     )
-    await ctx.reply('🎉 Success!', { reply_markup: keyboard })
+    await ctx.reply(celebrate(), { reply_markup: keyboard })
 
     // Cleanup
     if (push.pending) {
@@ -912,7 +919,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
         `#${projectResult.projectId} · ${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
-    await ctx.reply('🎉', { reply_markup: keyboard })
+    await ctx.reply(celebrate(), { reply_markup: keyboard })
   } catch (err) {
     ctx.session.upload = undefined
     await ctx.api.editMessageText(
@@ -1035,7 +1042,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
         `#${projectResult.projectId} · ${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
-    await ctx.reply('🎉', { reply_markup: keyboard })
+    await ctx.reply(celebrate(), { reply_markup: keyboard })
   } catch (err) {
     ctx.session.upload = undefined
     await ctx.api.editMessageText(
@@ -1169,7 +1176,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
         `#${projectResult.projectId} · ${pending.projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
-    await ctx.reply('🎉', { reply_markup: keyboard })
+    await ctx.reply(celebrate(), { reply_markup: keyboard })
   } catch (err) {
     console.error('[REPO-UPLOAD-ERR]', err instanceof Error ? err.message : String(err))
     await ctx.api.editMessageText(
