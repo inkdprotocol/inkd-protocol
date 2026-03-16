@@ -343,7 +343,12 @@ export function projectsRouter(cfg: ApiConfig): Router {
       }) as bigint
 
       const results: ReturnType<typeof serializeProject>[] = []
-      for (let i = offset + 1; i <= Math.min(Number(total), offset + limit); i++) {
+      // When owner filter is set, scan ALL projects (owner may be anywhere in the list)
+      // Without owner filter, use pagination
+      const scanEnd = owner ? Number(total) : Math.min(Number(total), offset + limit)
+      const scanStart = owner ? 1 : offset + 1
+      let ownerMatches = 0
+      for (let i = scanStart; i <= scanEnd; i++) {
         const p = await publicClient.readContract({
           address:      registryAddress,
           abi:          REGISTRY_ABI,
@@ -353,11 +358,17 @@ export function projectsRouter(cfg: ApiConfig): Router {
         if (!p.exists) continue
         if (owner && p.owner.toLowerCase() !== owner.toLowerCase()) continue
         if (isAgent !== undefined && p.isAgent !== isAgent) continue
-        results.push(serializeProject(p))
+        ownerMatches++
+        // Apply pagination within matched results
+        if (owner) {
+          if (ownerMatches > offset && results.length < limit) results.push(serializeProject(p))
+        } else {
+          results.push(serializeProject(p))
+        }
       }
 
       res.setHeader('Cache-Control', 'public, max-age=10')
-      res.json({ data: results, total: total.toString(), offset, limit, source: 'rpc' })
+      res.json({ data: results, total: owner ? ownerMatches.toString() : total.toString(), offset, limit, source: 'rpc' })
     } catch (err) {
       sendError(res, err)
     }
