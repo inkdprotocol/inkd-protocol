@@ -904,7 +904,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
         `✏️ ${projectName}\n` +
         `${privacyIcon} ${isPrivate ? 'Private' : 'Public'}\n` +
         `🔗 \`${arweaveResult.hash}\`\n\n` +
-        `#${projectResult.projectId} · ${projectName}`,
+        `#${projectResult.projectId} · ${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
     await ctx.reply('🎉', { reply_markup: keyboard })
@@ -1027,7 +1027,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
         `📄 ${pending.fileName}\n` +
         `${privacyIcon} ${isPrivate ? 'Private' : 'Public'}\n` +
         `🔗 \`${arweaveResult.hash}\`\n\n` +
-        `#${projectResult.projectId} · ${projectName}`,
+        `#${projectResult.projectId} · ${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
     await ctx.reply('🎉', { reply_markup: keyboard })
@@ -1161,7 +1161,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
         `🐙 ${pending.owner}/${pending.repo}@${pending.ref}\n` +
         `${privacyIcon} ${isPrivate ? 'Private' : 'Public'}\n` +
         `🔗 \`${arweaveResult.hash}\`\n\n` +
-        `#${projectResult.projectId} · ${pending.projectName}`,
+        `#${projectResult.projectId} · ${pending.projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
     await ctx.reply('🎉', { reply_markup: keyboard })
