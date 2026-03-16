@@ -157,8 +157,8 @@ export async function ensureSufficientBalance(
 
 export function buildSuccessKeyboard(txHash: string, arweaveHash: string, isPublic = true): InlineKeyboard {
   const tweetText = isPublic
-    ? encodeURIComponent(`Just uploaded my first file forever on Arweave via @inkdprotocol\n\nhttps://arweave.net/${arweaveHash}`)
-    : encodeURIComponent(`Just stored a private file permanently on Arweave via @inkdprotocol\n\nTry it yourself → https://t.me/inkdbot`)
+    ? encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\nhttps://arweave.net/${arweaveHash}`)
+    : encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\nhttps://t.me/inkdbot`)
   const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`
 
   return new InlineKeyboard()
