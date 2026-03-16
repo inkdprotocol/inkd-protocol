@@ -109,11 +109,9 @@ export async function uploadToArweave(
 
   if (!res.ok) {
     const text = await res.text()
-    // Fallback to direct Turbo on API error
-    if (res.status === 413) {
-      return uploadViaTurbo(payload, contentType, filename, encrypted)
-    }
-    throw new Error(`Upload to Arweave failed ${res.status}: ${text}`)
+    // Fallback to direct Turbo on any API error (413, 500, 503, etc.)
+    console.warn(`[upload] API upload failed ${res.status} — falling back to direct Turbo`)
+    return uploadViaTurbo(payload, contentType, filename, encrypted)
   }
 
   const result = await res.json() as UploadResponse

@@ -18,12 +18,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ardrive/turbo-sdk": "^1.41.0",
     "@irys/sdk": "^0.2.11",
     "@x402/core": "^2.5.0",
     "@x402/evm": "^2.5.0",
     "@x402/express": "^2.5.0",
     "@x402/fetch": "^2.5.0",
     "cors": "^2.8.5",
+    "ethers": "^6.16.0",
     "express": "^4.19.2",
     "express-rate-limit": "^8.3.1",
     "viem": "^2.21.0",
