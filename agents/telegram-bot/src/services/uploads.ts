@@ -568,7 +568,7 @@ export async function handlePushConfirm(ctx: MyContext) {
       ctx.chat!.id,
       statusMsg.message_id,
       `✅ Version Pushed!\n\n` +
-        `📂 Project: #${push.projectId}\n` +
+        `📂 Project: ${push.projectId}\n` +
         `📦 Version: ${versionResult.versionTag}\n\n` +
         `Use /my_projects to view your projects.`
     )
@@ -894,7 +894,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
 
     await ctx.api.editMessageText(
       ctx.chat!.id, statusMsg.message_id,
-      `⏳ *Storing your file...*\n\n✅ Uploaded\n✅ Record created (#${projectResult.projectId})\n▪ Confirming on Base ⏳`,
+      `⏳ *Storing your file...*\n\n✅ Uploaded\n✅ Record created\n▪ Confirming on Base ⏳`,
       { parse_mode: 'Markdown' }
     )
 
@@ -916,7 +916,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
         `✏️ ${projectName}\n` +
         `${privacyIcon} ${isPrivate ? 'Private' : 'Public'}\n` +
         `🔗 \`${arweaveResult.hash}\`\n\n` +
-        `#${projectResult.projectId} · ${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
+        `${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
     await ctx.reply(celebrate(), { reply_markup: keyboard })
@@ -1017,7 +1017,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
 
     await ctx.api.editMessageText(
       ctx.chat!.id, statusMsg.message_id,
-      `⏳ *Storing your file...*\n\n✅ Downloaded\n✅ Uploaded\n✅ Record created (#${projectResult.projectId})\n▪ Confirming ⏳`,
+      `⏳ *Storing your file...*\n\n✅ Downloaded\n✅ Uploaded\n✅ Record created\n▪ Confirming ⏳`,
       { parse_mode: 'Markdown' }
     )
 
@@ -1039,7 +1039,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
         `📄 ${pending.fileName}\n` +
         `${privacyIcon} ${isPrivate ? 'Private' : 'Public'}\n` +
         `🔗 \`${arweaveResult.hash}\`\n\n` +
-        `#${projectResult.projectId} · ${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
+        `${projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
     await ctx.reply(celebrate(), { reply_markup: keyboard })
@@ -1151,7 +1151,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
 
     await ctx.api.editMessageText(
       ctx.chat!.id, statusMsg.message_id,
-      `⏳ *Storing your repo...*\n\n✅ Uploaded\n✅ Record created (#${projectResult.projectId})\n▪ Confirming ⏳`,
+      `⏳ *Storing your repo...*\n\n✅ Uploaded\n✅ Record created\n▪ Confirming ⏳`,
       { parse_mode: 'Markdown' }
     )
 
@@ -1173,7 +1173,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
         `🐙 ${pending.owner}/${pending.repo}@${pending.ref}\n` +
         `${privacyIcon} ${isPrivate ? 'Private' : 'Public'}\n` +
         `🔗 \`${arweaveResult.hash}\`\n\n` +
-        `#${projectResult.projectId} · ${pending.projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
+        `${pending.projectName}\n\n_⏳ Takes a few minutes to be publicly viewable on Arweave._`,
       { parse_mode: 'Markdown' }
     )
     await ctx.reply(celebrate(), { reply_markup: keyboard })
