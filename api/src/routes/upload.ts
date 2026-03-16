@@ -20,11 +20,9 @@ import { getArweaveCostUsdc } from '../arweave.js'
 
 // ─── Irys upload helper ───────────────────────────────────────────────────────
 
-const ARWEAVE_GW        = 'https://arweave.net'
-const TURBO_PAYMENT_URL = 'https://payment.ardrive.io/v1'
-const TURBO_DEPOSIT     = '0x6A0A10FFD285c971B841bee8892878c0d583Bf67'
-const USDC_BASE         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const MAX_BYTES         = 50 * 1024 * 1024  // 50 MB
+const ARWEAVE_GW  = 'https://arweave.net'
+const IRYS_NODE   = 'https://uploader.irys.xyz'  // uploader.irys.xyz is active (node2 had issues)
+const MAX_BYTES   = 50 * 1024 * 1024  // 50 MB
 
 async function uploadViaTurbo(
   data:        Buffer,
@@ -32,29 +30,11 @@ async function uploadViaTurbo(
   serverKey:   string,
   tags?:       Record<string, string>,
 ): Promise<{ txId: string; url: string }> {
-  // @ts-ignore — @ardrive/turbo-sdk types
-  const { TurboFactory, EthereumSigner } = await import('@ardrive/turbo-sdk/node')
-  const { Readable } = await import('stream')
-
-  const signer = new EthereumSigner(serverKey)
-  const turbo  = TurboFactory.authenticated({ signer })
-
-  // Check balance — top up with $1 USDC if needed
-  const { winc } = await turbo.getBalance()
-  const [cost]   = await turbo.getUploadCosts({ bytes: [data.length] })
-  if (BigInt(winc) < BigInt(cost.winc)) {
-    const { ethers } = await import('ethers')
-    const rpc    = process.env['INKD_RPC_URL'] ?? 'https://1rpc.io/base'
-    const wallet = new ethers.Wallet(serverKey, new ethers.JsonRpcProvider(rpc))
-    const usdc   = new ethers.Contract(USDC_BASE, ['function transfer(address,uint256) returns (bool)'], wallet)
-    const tx     = await usdc.transfer(TURBO_DEPOSIT, 1_000_000n)
-    await tx.wait()
-    const creditRes = await fetch(`${TURBO_PAYMENT_URL}/account/balance/base-usdc`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tx_id: tx.hash }),
-    })
-    if (!creditRes.ok) throw new Error(`Turbo credit failed: ${await creditRes.text()}`)
-  }
+  // Use Irys SDK with uploader.irys.xyz (node2 had deposit issues)
+  // @ts-ignore — @irys/sdk types vary by version
+  const { default: Irys } = await import('@irys/sdk')
+  const irys = new Irys({ url: IRYS_NODE, token: 'ethereum', key: serverKey })
+  await irys.ready()
 
   const tagList = [
     { name: 'Content-Type', value: contentType },
@@ -62,13 +42,8 @@ async function uploadViaTurbo(
     ...(tags ? Object.entries(tags).map(([n, v]) => ({ name: n, value: v })) : []),
   ]
 
-  const result = await turbo.uploadFile({
-    fileStreamFactory: () => Readable.from(data),
-    fileSizeFactory:   () => data.length,
-    dataItemOpts:      { tags: tagList },
-  })
-
-  return { txId: result.id, url: `${ARWEAVE_GW}/${result.id}` }
+  const receipt = await irys.upload(data, { tags: tagList })
+  return { txId: receipt.id, url: `${ARWEAVE_GW}/${receipt.id}` }
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
