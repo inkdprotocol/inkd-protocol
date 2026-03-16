@@ -30,3 +30,11 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Smoke test — upload endpoint
+        run: |
+          RESULT=$(curl -s -X POST https://api.inkdprotocol.com/v1/upload \
+            -H "Content-Type: application/json" \
+            -d '{"data":"aGVsbG8=","contentType":"text/plain","filename":"smoke-test.txt"}')
+          echo "Response: $RESULT"
+          echo "$RESULT" | grep -q '"hash":"ar://' || (echo "SMOKE TEST FAILED — upload endpoint broken!" && exit 1)
