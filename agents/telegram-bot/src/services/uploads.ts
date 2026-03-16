@@ -155,10 +155,17 @@ export async function ensureSufficientBalance(
 
 // ─── Success Buttons Helper ───────────────────────────────────────────────────
 
-export function buildSuccessKeyboard(txHash: string, arweaveHash: string): InlineKeyboard {
+export function buildSuccessKeyboard(txHash: string, arweaveHash: string, isPublic = true): InlineKeyboard {
+  const tweetText = isPublic
+    ? encodeURIComponent(`Just uploaded my first file forever on Arweave via @inkdprotocol\n\nhttps://arweave.net/${arweaveHash}`)
+    : encodeURIComponent(`Just stored a private file permanently on Arweave via @inkdprotocol\n\nTry it yourself → https://t.me/inkdbot`)
+  const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`
+
   return new InlineKeyboard()
     .url('🔗 View File', `https://arweave.net/${arweaveHash}`)
     .url('⛓ On-chain', `https://basescan.org/tx/${txHash}`)
+    .row()
+    .url('🐦 Share on X', tweetUrl)
     .row()
     .text('📁 My Files', 'home_files')
 }
@@ -889,7 +896,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
 
     // Success
     ctx.session.upload = undefined
-    const keyboard = buildSuccessKeyboard(versionResult.txHash, arweaveResult.hash)
+    const keyboard = buildSuccessKeyboard(versionResult.txHash, arweaveResult.hash, !isPrivate)
 
     await ctx.api.editMessageText(
       ctx.chat!.id, statusMsg.message_id,
@@ -1012,7 +1019,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
 
     // Success
     ctx.session.upload = undefined
-    const keyboard = buildSuccessKeyboard(versionResult.txHash, arweaveResult.hash)
+    const keyboard = buildSuccessKeyboard(versionResult.txHash, arweaveResult.hash, !isPrivate)
 
     await ctx.api.editMessageText(
       ctx.chat!.id, statusMsg.message_id,
@@ -1146,7 +1153,7 @@ export async function handleRepoConfirm(ctx: MyContext, isPrivate = false) {
 
     // Success
     ctx.session.upload = undefined
-    const keyboard = buildSuccessKeyboard(versionResult.txHash, arweaveResult.hash)
+    const keyboard = buildSuccessKeyboard(versionResult.txHash, arweaveResult.hash, !isPrivate)
 
     await ctx.api.editMessageText(
       ctx.chat!.id, statusMsg.message_id,
