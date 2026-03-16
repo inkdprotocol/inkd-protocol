@@ -39,7 +39,7 @@ Every time you open the bot you see:
 | Command | Description |
 |---|---|
 | `/start` | Home screen |
-| `/wallet` | Address, ETH + USDC balance |
+| `/wallet` | Address, ETH + USDC balance, QR code for deposits |
 | `/upload_text` | Upload text or notes |
 | `/upload_repo` | Archive a GitHub repo |
 | `/my_projects` | Browse your projects |
@@ -109,7 +109,25 @@ The bot watches your wallet balance in the background. When USDC arrives, you ge
 
 The bot creates and manages a wallet for you. Your private key is stored AES-256-GCM encrypted — only you can export it via `/export_key`.
 
-Fund it: send USDC (and a small amount of ETH for gas) on Base to your wallet address.
+Fund it: send USDC (and a small amount of ETH for gas) on Base to your wallet address. Tap **💰 Add Funds** to see your address with a scannable QR code.
+
+### Export Key
+
+Need to use your wallet elsewhere? Use `/export_key` or tap **🔑 Export Key** in the wallet menu. You'll see a security warning before the key is revealed — make sure to store it safely and delete the message after saving.
+
+---
+
+## Hide / Archive Projects
+
+Don't want to see a project in your file list anymore? Each project detail view has a **🙈 Hide** button. Hidden projects move to the **📦 Archived** section in My Files.
+
+To restore a hidden project, open **📦 Archived** and tap the project to unhide it. This is purely cosmetic — the on-chain data is never affected.
+
+---
+
+## Share on X
+
+After a successful upload, you'll see a **Share on 𝕏** button. Tap it to post your upload directly to Twitter/X with a pre-filled message including the Arweave link.
 
 ---
 

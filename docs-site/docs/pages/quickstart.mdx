@@ -1,13 +1,33 @@
 ---
 title: Quickstart
-description: Create your first on-chain project in under 5 minutes.
+description: Store your first file on-chain in under 2 minutes.
 ---
 
 # Quickstart
 
-This guide walks you through creating a project and pushing your first version using the Inkd CLI.
+The fastest way to get started is the **Telegram Bot** — no CLI, no setup, just send a file.
 
-## Prerequisites
+---
+
+## Option 1: Telegram Bot (easiest)
+
+1. Open [@inkdbot](https://t.me/inkdbot)
+2. Tap **🎓 Tutorial** → creates a wallet for you automatically
+3. Fund it with USDC on Base (scan the QR code)
+4. Send any file, text, or GitHub repo link
+5. Done — stored forever on Arweave, registered on Base
+
+That's it. No private keys to manage, no CLI to install.
+
+→ [Full Bot Guide](/bot/overview)
+
+---
+
+## Option 2: CLI (for developers)
+
+If you prefer the command line or need automation, use the CLI.
+
+### Prerequisites
 
 - Node.js 18 or later
 - A wallet with Base Mainnet USDC and a small amount of ETH for gas
@@ -17,9 +37,7 @@ This guide walks you through creating a project and pushing your first version u
 Buy USDC on [Coinbase](https://coinbase.com) and send to Base, or bridge from Ethereum at [bridge.base.org](https://bridge.base.org).
 :::
 
----
-
-## 1. Install the CLI
+### 1. Install the CLI
 
 ```bash
 npm install -g @inkd/cli
@@ -32,9 +50,7 @@ inkd --version
 # @inkd/cli 0.2.0
 ```
 
----
-
-## 2. Configure your wallet
+### 2. Configure your wallet
 
 ```bash
 export INKD_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
@@ -57,9 +73,7 @@ USDC:      12.50
 Projects:  9 registered
 ```
 
----
-
-## 3. Create a project
+### 3. Create a project
 
 ```bash
 inkd project create \
@@ -89,9 +103,7 @@ Project names are **global and permanent** — once a name is taken, it cannot b
 Names are normalized to lowercase. Max 64 characters.
 :::
 
----
-
-## 4. Push a version
+### 4. Push a version
 
 Upload a file and register it on-chain:
 
@@ -122,9 +134,7 @@ Already have an Arweave hash? Skip the upload:
 inkd version push --id 10 --hash ar://QmAbc123xyz --tag v1.0.0
 ```
 
----
-
-## 5. Verify on-chain
+### 5. Verify on-chain
 
 ```bash
 inkd project get 10
