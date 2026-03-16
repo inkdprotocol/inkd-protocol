@@ -44,11 +44,21 @@ export interface GraphAgent {
   readmeHash: string
 }
 
+export interface GraphBuyback {
+  id: string
+  caller: string
+  usdcIn: string
+  inkdOut: string
+  timestamp: string
+  txHash: string
+}
+
 export interface GraphStats {
   totalProjects: number
   totalVersions: number
-  totalAgents: number
+  totalAgentProjects: number
   totalSettled: string
+  totalUsdcVolume: string
 }
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -190,12 +200,24 @@ export class GraphClient {
     const data = await this.query<{ protocolStats: GraphStats | null }>(`
       query GetStats {
         protocolStats(id: "global") {
-          totalProjects totalVersions totalAgents totalSettled
+          totalProjects totalVersions totalAgentProjects totalSettled totalUsdcVolume
         }
       }
     `)
 
     return data.protocolStats
+  }
+
+  /** Get recent buyback events. */
+  async getBuybacks(limit = 20, skip = 0): Promise<GraphBuyback[]> {
+    const data = await this.query<{ buybackEvents: GraphBuyback[] }>(`
+      query GetBuybacks($first: Int!, $skip: Int!) {
+        buybackEvents(first: $first, skip: $skip, orderBy: timestamp, orderDirection: desc) {
+          id caller usdcIn inkdOut timestamp txHash
+        }
+      }
+    `, { first: limit, skip })
+    return data.buybackEvents
   }
 
   /** Count total projects (from stats entity). */
@@ -217,3 +239,5 @@ export function initGraphClient(endpoint: string): GraphClient {
   _graphClient = new GraphClient(endpoint)
   return _graphClient
 }
+
+

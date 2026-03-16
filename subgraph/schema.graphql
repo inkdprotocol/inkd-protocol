@@ -178,6 +178,9 @@ type ProtocolStats @entity {
   " Total ETH collected in transfer fees (wei) "
   totalTransferFees: BigInt!
 
+  " Total USDC volume processed via x402 payments (6 decimals) "
+  totalUsdcVolume: BigInt!
+
   " Current version push fee (wei) "
   versionFee: BigInt!
 

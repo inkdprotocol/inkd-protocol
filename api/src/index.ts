@@ -41,6 +41,7 @@ import { projectsRouter } from './routes/projects.js'
 import { agentsRouter }   from './routes/agents.js'
 import { buildUploadRouter } from './routes/upload.js'
 import { buildSearchRouter } from './routes/search.js'
+import { buybacksRouter } from './routes/buybacks.js'
 import { initGraphClient, getGraphClient } from './graph.js'
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
@@ -113,6 +114,7 @@ app.use('/v1/projects', projectsRouter(cfg))
 app.use('/v1/agents',   agentsRouter(cfg))
 app.use('/v1/upload',   buildUploadRouter(cfg))   // Arweave upload (free, no x402)
 app.use('/v1/search',   buildSearchRouter())      // Graph-powered search
+app.use('/v1/buybacks', buybacksRouter())         // Buyback events from The Graph
 
 // ─── Public share links ───────────────────────────────────────────────────────
 // /p/:id → redirect to latest Arweave content for the project
@@ -151,6 +153,7 @@ app.get('/', (_req, res) => {
       'GET  /v1/agents',
       'GET  /v1/agents/:id',
       'GET  /v1/agents/by-name/:name',
+      'GET  /v1/buybacks',
     ],
   })
 })

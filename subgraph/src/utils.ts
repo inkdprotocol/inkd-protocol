@@ -17,6 +17,7 @@ export function loadOrCreateStats(timestamp: BigInt): ProtocolStats {
     stats.totalAgentProjects = ZERO_BI;
     stats.totalVersionFees = ZERO_BI;
     stats.totalTransferFees = ZERO_BI;
+    stats.totalUsdcVolume = ZERO_BI;
     stats.versionFee = BigInt.fromString("1000000000000000"); // 0.001 ETH default
     stats.transferFee = BigInt.fromString("5000000000000000"); // 0.005 ETH default
     stats.lastUpdated = timestamp;

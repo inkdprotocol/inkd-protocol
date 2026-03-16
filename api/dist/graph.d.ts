@@ -48,11 +48,20 @@ export interface GraphAgent {
     createdAt: string;
     readmeHash: string;
 }
+export interface GraphBuyback {
+    id: string;
+    caller: string;
+    usdcIn: string;
+    inkdOut: string;
+    timestamp: string;
+    txHash: string;
+}
 export interface GraphStats {
     totalProjects: number;
     totalVersions: number;
-    totalAgents: number;
+    totalAgentProjects: number;
     totalSettled: string;
+    totalUsdcVolume: string;
 }
 export declare class GraphClient {
     private endpoint;
@@ -77,6 +86,8 @@ export declare class GraphClient {
     getProjectsByOwner(address: string, limit?: number): Promise<GraphProject[]>;
     /** Get protocol stats. */
     getStats(): Promise<GraphStats | null>;
+    /** Get recent buyback events. */
+    getBuybacks(limit?: number, skip?: number): Promise<GraphBuyback[]>;
     /** Count total projects (from stats entity). */
     getProjectCount(): Promise<number>;
 }

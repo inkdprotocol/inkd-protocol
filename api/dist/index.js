@@ -45,6 +45,7 @@ const projects_js_1 = require("./routes/projects.js");
 const agents_js_1 = require("./routes/agents.js");
 const upload_js_1 = require("./routes/upload.js");
 const search_js_1 = require("./routes/search.js");
+const buybacks_js_1 = require("./routes/buybacks.js");
 const graph_js_1 = require("./graph.js");
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 const cfg = (0, config_js_1.loadConfig)();
@@ -104,6 +105,7 @@ app.use('/v1/projects', (0, projects_js_1.projectsRouter)(cfg));
 app.use('/v1/agents', (0, agents_js_1.agentsRouter)(cfg));
 app.use('/v1/upload', (0, upload_js_1.buildUploadRouter)(cfg)); // Arweave upload (free, no x402)
 app.use('/v1/search', (0, search_js_1.buildSearchRouter)()); // Graph-powered search
+app.use('/v1/buybacks', (0, buybacks_js_1.buybacksRouter)()); // Buyback events from The Graph
 // ─── Public share links ───────────────────────────────────────────────────────
 // /p/:id → redirect to latest Arweave content for the project
 app.get('/p/:id', async (req, res) => {
@@ -142,6 +144,7 @@ app.get('/', (_req, res) => {
             'GET  /v1/agents',
             'GET  /v1/agents/:id',
             'GET  /v1/agents/by-name/:name',
+            'GET  /v1/buybacks',
         ],
     });
 });

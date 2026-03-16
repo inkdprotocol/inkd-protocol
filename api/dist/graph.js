@@ -132,11 +132,22 @@ class GraphClient {
         const data = await this.query(`
       query GetStats {
         protocolStats(id: "global") {
-          totalProjects totalVersions totalAgents totalSettled
+          totalProjects totalVersions totalAgentProjects totalSettled totalUsdcVolume
         }
       }
     `);
         return data.protocolStats;
+    }
+    /** Get recent buyback events. */
+    async getBuybacks(limit = 20, skip = 0) {
+        const data = await this.query(`
+      query GetBuybacks($first: Int!, $skip: Int!) {
+        buybackEvents(first: $first, skip: $skip, orderBy: timestamp, orderDirection: desc) {
+          id caller usdcIn inkdOut timestamp txHash
+        }
+      }
+    `, { first: limit, skip });
+        return data.buybackEvents;
     }
     /** Count total projects (from stats entity). */
     async getProjectCount() {
