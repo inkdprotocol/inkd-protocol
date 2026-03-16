@@ -28,6 +28,8 @@ inkd cannot. It's a smart contract on Base. No admin key. No pause function. No 
 3. The Arweave hash is registered on-chain via the inkd Registry
 4. Your wallet is the owner — forever
 
+Each upload is a new version. Nothing is ever overwritten — v1 stays on Arweave when you push v2. Agents always know the latest version via `getLatestVersion(projectId)`.
+
 No accounts. No usernames. No platform lock-in.
 
 ---

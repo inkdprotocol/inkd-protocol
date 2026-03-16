@@ -49,6 +49,8 @@ Project {
 
 A version links a project to a permanent Arweave content hash. Every version is immutable once pushed.
 
+**Nothing is ever overwritten.** When you push v2, v1 still exists on Arweave forever. The latest version is always the highest version number — agents and the SDK always know which one is current via `getLatestVersion(projectId)`. Think of it like git commits: every snapshot is permanent, and the latest is always the tip.
+
 ```solidity
 Version {
   projectId:   uint256

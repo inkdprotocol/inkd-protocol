@@ -341,8 +341,13 @@ export async function beginVersionPush(ctx: MyContext, projectId: number) {
     }
   } catch { /* ignore, use default */ }
 
+  const isUpdate = suggestedTag !== 'v1.0.0'
+  const versionNote = isUpdate
+    ? `_Your previous version stays on Arweave forever. This adds a new snapshot on top._\n\n`
+    : `_Each version you upload is stored permanently on Arweave — nothing is ever overwritten._\n\n`
+
   await ctx.reply(
-    `📝 *Version tag*\n\nSend a version tag or tap to use the suggestion:`,
+    `📝 *Version tag*\n\n${versionNote}Send a tag or use the suggestion:`,
     {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
