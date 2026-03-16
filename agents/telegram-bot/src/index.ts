@@ -279,8 +279,7 @@ bot.callbackQuery('wallet_deposit', async ctx => {
   if (!wallet) { await ctx.reply('No wallet.'); return }
   await ctx.reply(
     `*Add funds to your wallet*\n\n` +
-    `Send USDC or ETH on Base to:\n\`${wallet}\`\n\n` +
-    `You can get USDC on Base at [Coinbase](https://coinbase.com) or [Uniswap](https://app.uniswap.org).`,
+    `Send USDC or ETH on Base to:\n\`${wallet}\``,
     {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard().text('🏠 Home', 'nav_home'),
@@ -898,11 +897,7 @@ bot.callbackQuery('wallet_new', async ctx => {
     await ctx.reply(
       `💰 *Fund your wallet*\n\n` +
       `Send USDC on Base to:\n\`${address}\`\n\n` +
-      `You need at least $0.10 USDC to upload.\n\n` +
-      `Get USDC:\n` +
-      `• [Coinbase](https://coinbase.com)\n` +
-      `• [Uniswap](https://app.uniswap.org)\n` +
-      `• [bridge.base.org](https://bridge.base.org)`,
+      `You need at least $0.10 USDC to upload.`,
       {
         parse_mode: 'Markdown',
         reply_markup: new InlineKeyboard()
