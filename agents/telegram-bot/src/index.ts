@@ -89,10 +89,10 @@ async function showHomeMenu(ctx: MyContext) {
     .text('❓ Help', 'home_help').text('🎓 Tutorial', 'start_tour')
 
   const caption = '🫟 *inkd*\n\nStore your code on-chain. For agents and humans.\n\n' +
-    '[🌐 inkdprotocol.com](https://inkdprotocol.com)\n' +
-    '[𝕏 @inkdprotocol](https://twitter.com/inkdprotocol)\n' +
+    '[🌐 Website](https://inkdprotocol.com)\n' +
+    '[𝕏 X](https://twitter.com/inkdprotocol) · [𝕏 X Agent](https://x.com/inkdprotocolbot)\n' +
     '[🐱 GitHub](https://github.com/inkdprotocol/inkdprotocol)\n' +
-    '[🪙 $INKD Token](https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07)'
+    '[🪙 $INKD](https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07)'
 
   try {
     await ctx.replyWithAnimation(INTRO_URL, {
