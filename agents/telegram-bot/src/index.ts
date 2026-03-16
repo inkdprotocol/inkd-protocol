@@ -1528,8 +1528,6 @@ export async function start() {
     { command: 'upload_repo',  description: 'Upload a GitHub repo to Arweave' },
     { command: 'my_projects',  description: 'View your projects' },
     { command: 'history',      description: 'View recent uploads' },
-    { command: 'search',       description: 'Search public projects' },
-    { command: 'top',          description: 'Trending public projects' },
     { command: 'stats',        description: 'Protocol stats' },
     { command: 'estimate',     description: 'Calculate upload cost: /estimate 500kb' },
     { command: 'export_key',   description: 'Export your private key (bot wallets only)' },
