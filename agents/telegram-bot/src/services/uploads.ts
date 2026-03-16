@@ -7,7 +7,7 @@ import path from 'node:path'
 const MAX_TEXT_BYTES  = 512 * 1024       // 512 KB text limit
 const MAX_REPO_MB     = 100              // 100 MB repo zip limit
 import { parseRepoInput, fetchRepoDefaultBranch, downloadRepoZip, listUserRepos } from './github.js'
-import { getUploadPriceEstimate, findProjectByOwnerAndName, type PriceEstimate } from './api.js'
+import { getUploadPriceEstimate, findProjectByOwnerAndName, listProjectsByOwner, type PriceEstimate } from './api.js'
 import { uploadToArweave, createProject, createProjectAutoName, pushVersion } from './x402.js'
 import { checkUsdcBalance, decryptPrivateKey } from './wallet.js'
 import { privateKeyToAccount } from 'viem/accounts'
@@ -118,10 +118,16 @@ export function formatApiError(err: unknown): string {
     return '❌ Payment failed. Check your USDC balance with /wallet.'
   if (msg.includes('404'))
     return '❌ Not found.'
-  if (msg.includes('timeout') || msg.includes('ETIMEDOUT'))
-    return '❌ Request timed out. Try again.'
+  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('timed out'))
+    return '❌ Upload timed out. Try a smaller file or try again.'
+  if (msg.includes('too large') || msg.includes('size') || msg.includes('413'))
+    return '❌ File too large. Maximum is 50MB.'
   if (msg.includes('invalid') || msg.includes('Invalid'))
     return `❌ Invalid input: ${msg.split(':').pop()?.trim()}`
+  if (msg.includes('replacement transaction') || msg.includes('nonce'))
+    return '❌ Transaction conflict. Try again in a moment.'
+  if (msg.includes('RPC') || msg.includes('network') || msg.includes('ECONNREFUSED'))
+    return '❌ Network error. Try again in a moment.'
   console.error('[inkd-bot] Unhandled error:', err)
   return `❌ Something went wrong. Try again or use /cancel.`
 }
@@ -162,6 +168,23 @@ const CELEBRATIONS = [
   '🫟 Stored forever on Arweave.',
 ]
 function celebrate() { return CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)] }
+
+// Show key backup reminder on first upload
+async function maybeShowKeyBackupReminder(ctx: any, walletAddress: string): Promise<void> {
+  try {
+    const projects = await listProjectsByOwner(walletAddress, 50)
+    if (projects.length <= 1) {
+      const { InlineKeyboard } = await import('grammy')
+      const kb = new InlineKeyboard()
+        .text('🔑 Export my key', 'wallet_export_key')
+        .text('Later', 'nav_home')
+      await ctx.reply(
+        '🔑 *One important thing:*\n\nThis is your first upload. Back up your wallet key — if you lose it, your files are still on Arweave but you lose ownership.\n\nTap below to export and save it somewhere safe.',
+        { parse_mode: 'Markdown', reply_markup: kb }
+      )
+    }
+  } catch { /* non-fatal */ }
+}
 export function buildSuccessKeyboard(txHash: string, arweaveHash: string, isPublic = true): InlineKeyboard {
   const tweetText = isPublic
     ? encodeURIComponent(`just stored this permanently onchain on my wallet via @inkdprotocol 🫟\n\nhttps://arweave.net/${arweaveHash}`)
@@ -920,6 +943,7 @@ export async function handleTextConfirm(ctx: MyContext, isPrivate = false) {
       { parse_mode: 'Markdown' }
     )
     await ctx.reply(celebrate(), { reply_markup: keyboard })
+    if (ctx.session.wallet) void maybeShowKeyBackupReminder(ctx, ctx.session.wallet)
   } catch (err) {
     ctx.session.upload = undefined
     await ctx.api.editMessageText(
@@ -1043,6 +1067,7 @@ export async function handleFileConfirm(ctx: MyContext, isPrivate = false) {
       { parse_mode: 'Markdown' }
     )
     await ctx.reply(celebrate(), { reply_markup: keyboard })
+    if (ctx.session.wallet) void maybeShowKeyBackupReminder(ctx, ctx.session.wallet)
   } catch (err) {
     ctx.session.upload = undefined
     await ctx.api.editMessageText(

@@ -168,8 +168,10 @@ bot.callbackQuery('home_files', async ctx => {
     return
   }
   const homeBtn = new InlineKeyboard().text('🏠 Home', 'nav_home')
+  const loadingMsg = await ctx.reply('📂 Loading your files...')
   try {
     const allProjects = await listProjectsByOwner(ctx.session.wallet, 50)
+    await ctx.api.deleteMessage(ctx.chat!.id, loadingMsg.message_id).catch(() => {})
     const hidden = getHiddenProjects(sessionDbPath, String(ctx.from?.id))
     const projects = allProjects.filter(p => !hidden.has(String(p.id)))
     if (!projects.length) {
@@ -189,6 +191,7 @@ bot.callbackQuery('home_files', async ctx => {
     kb.row().text('🏠 Home', 'nav_home')
     await ctx.reply(`*Your files* (${projects.length})`, { parse_mode: 'Markdown', reply_markup: kb })
   } catch (err) {
+    await ctx.api.deleteMessage(ctx.chat!.id, loadingMsg.message_id).catch(() => {})
     await ctx.reply(`Failed to load files: ${(err as Error).message}`, { reply_markup: homeBtn })
   }
 })

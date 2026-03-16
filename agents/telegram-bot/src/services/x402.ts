@@ -269,7 +269,8 @@ export async function createProjectAutoName(
   const baseName = body.name.slice(0, 60) // leave room for suffix
   
   for (let attempt = 0; attempt < 10; attempt++) {
-    const name = attempt === 0 ? baseName : `${baseName}-${attempt + 1}`
+    const suffix = attempt === 0 ? '' : `-${Math.random().toString(36).slice(2, 7)}`
+    const name = `${baseName}${suffix}`
     try {
       const result = await createProject(encryptedKey, { ...body, name })
       return { ...result, finalName: name }

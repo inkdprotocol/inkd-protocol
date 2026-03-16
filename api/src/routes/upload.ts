@@ -24,6 +24,16 @@ const ARWEAVE_GW  = 'https://arweave.net'
 const IRYS_NODE   = 'https://uploader.irys.xyz'  // uploader.irys.xyz is active (node2 had issues)
 const MAX_BYTES   = 50 * 1024 * 1024  // 50 MB
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try { return await fn() } catch (err) {
+      if (i === retries - 1) throw err
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)))
+    }
+  }
+  throw new Error('unreachable')
+}
+
 async function uploadViaTurbo(
   data:        Buffer,
   contentType: string,
@@ -102,12 +112,12 @@ export function buildUploadRouter(cfg: ApiConfig): Router {
         costUsdc   = cost.toString()
       } catch { /* non-fatal */ }
 
-      const { txId, url } = await uploadViaTurbo(
+      const { txId, url } = await withRetry(() => uploadViaTurbo(
         data,
         contentType,
-        cfg.serverWalletKey,
+        cfg.serverWalletKey!,
         extraTags,
-      )
+      ))
 
       // IPFS dual-storage (optional, requires IPFS_GATEWAY_URL + IPFS_TOKEN env vars)
       let ipfsHash: string | undefined
