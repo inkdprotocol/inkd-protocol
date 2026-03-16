@@ -1,9 +1,13 @@
 # inkd
 
 [![CI](https://github.com/inkdprotocol/inkdprotocol/actions/workflows/ci.yml/badge.svg)](https://github.com/inkdprotocol/inkdprotocol/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@inkd/sdk?label=%40inkd%2Fsdk)](https://www.npmjs.com/package/@inkd/sdk)
-[![Base](https://img.shields.io/badge/Base-Mainnet-blue)](https://base.org)
+[![SDK](https://img.shields.io/npm/v/@inkd/sdk?label=%40inkd%2Fsdk&color=blue)](https://www.npmjs.com/package/@inkd/sdk)
+[![CLI](https://img.shields.io/npm/v/@inkd/cli?label=%40inkd%2Fcli&color=blue)](https://www.npmjs.com/package/@inkd/cli)
+[![AgentKit](https://img.shields.io/npm/v/@inkd/agentkit?label=%40inkd%2Fagentkit&color=blue)](https://www.npmjs.com/package/@inkd/agentkit)
+[![MCP](https://img.shields.io/npm/v/@inkd/mcp?label=%40inkd%2Fmcp&color=blue)](https://www.npmjs.com/package/@inkd/mcp)
+[![Base](https://img.shields.io/badge/Base-Mainnet-0052FF?logo=coinbase)](https://base.org)
 [![x402](https://img.shields.io/badge/x402-native-orange)](https://x402.org)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Permanent on-chain storage for code, files, and agents.**
 
@@ -139,12 +143,12 @@ import { InkdActionProvider } from '@inkd/agentkit'
 
 ## Packages
 
-| Package | Version | Description |
+| Package | Version | What it does |
 |---|---|---|
-| [`@inkd/sdk`](https://npmjs.com/package/@inkd/sdk) | ![npm](https://img.shields.io/npm/v/@inkd/sdk) | TypeScript SDK — ProjectsClient, AgentVault |
-| [`@inkd/cli`](https://npmjs.com/package/@inkd/cli) | ![npm](https://img.shields.io/npm/v/@inkd/cli) | CLI — create, push, list |
-| [`@inkd/agentkit`](https://npmjs.com/package/@inkd/agentkit) | ![npm](https://img.shields.io/npm/v/@inkd/agentkit) | Coinbase AgentKit action provider |
-| [`@inkd/mcp`](https://npmjs.com/package/@inkd/mcp) | ![npm](https://img.shields.io/npm/v/@inkd/mcp) | Model Context Protocol server |
+| [`@inkd/sdk`](https://npmjs.com/package/@inkd/sdk) | [![npm](https://img.shields.io/npm/v/@inkd/sdk)](https://npmjs.com/package/@inkd/sdk) | TypeScript SDK. `ProjectsClient` handles x402 payments automatically. `AgentVault` stores credentials encrypted on Arweave. |
+| [`@inkd/cli`](https://npmjs.com/package/@inkd/cli) | [![npm](https://img.shields.io/npm/v/@inkd/cli)](https://npmjs.com/package/@inkd/cli) | CLI tool for humans and CI pipelines. `inkd project create`, `inkd version push`, `inkd project list`. |
+| [`@inkd/agentkit`](https://npmjs.com/package/@inkd/agentkit) | [![npm](https://img.shields.io/npm/v/@inkd/agentkit)](https://npmjs.com/package/@inkd/agentkit) | Coinbase AgentKit plugin. Drop-in action provider for AI agents built on CDP. 4 actions: create, push, get, list. |
+| [`@inkd/mcp`](https://npmjs.com/package/@inkd/mcp) | [![npm](https://img.shields.io/npm/v/@inkd/mcp)](https://npmjs.com/package/@inkd/mcp) | MCP server for Claude, Cursor, Windsurf. One config line and any MCP-compatible AI can store and retrieve files permanently. |
 
 ---
 
