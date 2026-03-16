@@ -222,11 +222,12 @@ async function withNonceRetry<T>(
       return await fn(nonce)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      const isNonceTooLow = msg.includes('nonce too low') || msg.includes('Nonce provided') || msg.includes('nonce') && msg.includes('lower than')
-      if (isNonceTooLow && attempt < maxRetries) {
+      const isNonceTooLow    = msg.includes('nonce too low') || msg.includes('Nonce provided') || (msg.includes('nonce') && msg.includes('lower than'))
+      const isReplacement    = msg.includes('replacement transaction underpriced') || msg.includes('replacement fee too low')
+      if ((isNonceTooLow || isReplacement) && attempt < maxRetries) {
         attempt++
-        // Small delay before retry to let the competing TX land
-        await new Promise(r => setTimeout(r, 200 * attempt))
+        // Delay before retry — let competing TX land, then fetch fresh nonce
+        await new Promise(r => setTimeout(r, 500 * attempt))
         continue
       }
       throw err
