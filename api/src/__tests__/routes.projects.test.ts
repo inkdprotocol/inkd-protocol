@@ -501,15 +501,17 @@ describe('GET /v1/projects/by-name/:name', () => {
 // ── GET /v1/projects with filters ─────────────────────────────────────────────
 
 describe('GET /v1/projects with owner/isAgent filters', () => {
-  it('returns 503 when owner filter requested but no graph client configured', async () => {
-    // owner filter requires Graph — without it, API returns 503 GRAPH_UNAVAILABLE
+  it('falls back to RPC when owner filter requested but no graph client configured', async () => {
+    // owner filter now falls back to RPC scan instead of 503 — allows use during graph sync
+    mockReadContract.mockReset()
+    mockReadContract.mockResolvedValue(0n) // projectCount = 0
     const { projectsRouter } = await import('../routes/projects.js')
     const app = express()
     app.use(express.json())
     app.use('/v1/projects', projectsRouter(baseCfg))
     const res = await request(app).get('/v1/projects?owner=0xOWNER')
-    expect(res.status).toBe(503)
-    expect(res.body.error.code).toBe('GRAPH_UNAVAILABLE')
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body.data)).toBe(true)
   })
 
   it('passes isAgent=true query param and returns list via RPC', async () => {

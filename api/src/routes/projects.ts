@@ -307,22 +307,22 @@ export function projectsRouter(cfg: ApiConfig): Router {
         try {
           const rows = await graph.getProjects({ offset, limit, isAgent, owner })
           const total = await graph.getProjectCount().catch(() => rows.length)
-          res.setHeader('Cache-Control', 'public, max-age=10')
-          return res.json({ data: rows.map(serializeGraphProject), total: total.toString(), offset, limit, source: 'graph' })
+
+          // If owner filter returns 0 but total projects > 0, subgraph may not be fully synced
+          // Fall back to RPC so user can see their projects while graph catches up
+          if (owner && rows.length === 0 && total > 0) {
+            /* fall through to RPC — graph has projects but not for this owner yet (still syncing) */
+          } else if (owner && rows.length === 0 && total === 0) {
+            /* graph has no projects at all — definitely still syncing, fall through to RPC */
+          } else {
+            res.setHeader('Cache-Control', 'public, max-age=10')
+            return res.json({ data: rows.map(serializeGraphProject), total: total.toString(), offset, limit, source: 'graph' })
+          }
         } catch (graphErr) {
           const errMsg = graphErr instanceof Error ? graphErr.message : String(graphErr)
           console.error('[graph] getProjects failed:', errMsg)
-          // If owner filter was requested and graph failed, return error — don't do inefficient RPC scan
-          if (owner) {
-            res.status(503).json({ error: { code: 'GRAPH_ERROR', message: `Graph query failed: ${errMsg}` } })
-            return
-          }
-          /* fall through to RPC for unfiltered queries */
+          /* fall through to RPC */
         }
-      } else if (owner) {
-        // No graph client — owner filter not supported without graph
-        res.status(503).json({ error: { code: 'GRAPH_UNAVAILABLE', message: 'Owner filter requires Graph indexer' } })
-        return
       }
 
       // 2. Indexer fallback
