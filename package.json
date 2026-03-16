@@ -37,7 +37,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.8.0",
     "graphql-request": "^7.4.0",
     "luxon": "^3.7.2",
     "twitter-api-v2": "^1.29.0"
