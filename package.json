@@ -1,11 +1,13 @@
 {
-  "name": "inkd-protocol",
+  "name": "inkdprotocol",
   "version": "0.9.0",
   "private": true,
   "description": "The decentralized ownership layer for AI agents on Base",
   "workspaces": [
     "sdk",
-    "cli"
+    "cli",
+    "agentkit",
+    "mcp"
   ],
   "scripts": {
     "build": "npm run build:sdk && npm run build:cli",
