@@ -160,7 +160,7 @@ export function buildSuccessKeyboard(txHash: string, arweaveHash: string): Inlin
     .url('🔗 View File', `https://arweave.net/${arweaveHash}`)
     .url('⛓ On-chain', `https://basescan.org/tx/${txHash}`)
     .row()
-    .url('📁 My Files', 'https://inkdprotocol.com')
+    .text('📁 My Files', 'home_files')
 }
 
 /** Public/Private visibility buttons shown before every upload confirm. */
