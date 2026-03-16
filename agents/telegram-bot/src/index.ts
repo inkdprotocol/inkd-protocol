@@ -1309,7 +1309,7 @@ async function sendTutorialStep(ctx: MyContext) {
       `Think: npm, but permanent and on-chain.`,
       {
         reply_markup: new InlineKeyboard()
-          .text('Next ➡️', 'tutorial_2').text('🏠 Home', 'nav_home')
+          .text('🏠 Home', 'nav_home').text('Next ➡️', 'tutorial_2')
       }
     )
   } else if (step === 2) {
@@ -1319,7 +1319,7 @@ async function sendTutorialStep(ctx: MyContext) {
         {
           parse_mode: 'Markdown',
           reply_markup: new InlineKeyboard()
-            .text('Next ➡️', 'tutorial_3').text('🏠 Home', 'nav_home')
+            .text('🏠 Home', 'nav_home').text('Next ➡️', 'tutorial_3')
         }
       )
     } else {
@@ -1343,7 +1343,7 @@ async function sendTutorialStep(ctx: MyContext) {
       {
         parse_mode: 'Markdown',
         reply_markup: new InlineKeyboard()
-          .text("✅ I'm ready", 'tutorial_4').text('🏠 Home', 'nav_home')
+          .text('🏠 Home', 'nav_home').text("✅ I'm ready", 'tutorial_4')
       }
     )
   } else if (step === 4) {
@@ -1358,7 +1358,7 @@ async function sendTutorialStep(ctx: MyContext) {
           .text('📝 Upload Text', 'tutorial_upload_text')
           .text('📦 Upload Repo', 'tutorial_upload_repo')
           .row()
-          .text('Done ✅', 'tutorial_done').text('🏠 Home', 'nav_home')
+          .text('🏠 Home', 'nav_home').text('Done ✅', 'tutorial_done')
       }
     )
   }
