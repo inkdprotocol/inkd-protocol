@@ -670,8 +670,7 @@ bot.command('links', async ctx => {
       reply_markup: new InlineKeyboard()
         .url('🌐 Website', 'https://inkdprotocol.com').row()
         .url('𝕏 @inkdprotocol', 'https://x.com/inkdprotocol').url('🕵️ Inkd Agent', 'https://x.com/inkdprotocolbot').row()
-        .url('🪙 Buy $INKD on Clanker', 'https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07').row()
-        .url('📄 Docs', 'https://inkdprotocol.com')
+        .url('🪙 Buy $INKD', 'https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07')
     }
   )
 })
