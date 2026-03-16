@@ -1061,7 +1061,7 @@ bot.callbackQuery(/^project:(\d+)$/, async ctx => {
     
     // Push version, share, preview
     keyboard
-      .text('🆕 Push Version', `push_version:${projectId}`)
+      .text('⬆️ Upload File', `push_version:${projectId}`)
       .text('🔗 Share', `share:${projectId}`)
       .row()
     
@@ -1278,7 +1278,7 @@ function formatProjectDetails(project: ApiProject, versions: ApiVersion[]) {
   const header = `*${project.name}*\n${vis} · ${vLabel}`
 
   if (!versions.length) {
-    return `${header}\n\n_Push your first version to store it on Arweave._`
+    return `${header}\n\n_No files yet. Tap ⬆️ Upload File to add one._`
   }
   const lines = versions.map(v => formatVersionLine(v))
   const body = lines.join('\n\n')
