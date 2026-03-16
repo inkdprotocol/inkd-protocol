@@ -139,11 +139,41 @@ bot.callbackQuery('home_files', async ctx => {
       const label = `${icon} ${p.name}${Number(p.versionCount) > 0 ? ` · v${p.versionCount}` : ''}`
       kb.text(label, `project:${p.id}`).row()
     }
-    kb.text('🏠 Home', 'nav_home')
+    if (hidden.size > 0) {
+      kb.row().text(`📦 Archived (${hidden.size})`, 'home_archived')
+    }
+    kb.row().text('🏠 Home', 'nav_home')
     await ctx.reply(`*Your files* (${projects.length})`, { parse_mode: 'Markdown', reply_markup: kb })
   } catch (err) {
     await ctx.reply(`Failed to load files: ${(err as Error).message}`, { reply_markup: homeBtn })
   }
+})
+
+bot.callbackQuery('home_archived', async ctx => {
+  await ctx.answerCallbackQuery()
+  if (!ctx.session.wallet) { await ctx.reply('Connect a wallet first.'); return }
+  const userId = String(ctx.from?.id)
+  const hidden = getHiddenProjects(sessionDbPath, userId)
+  if (!hidden.size) {
+    await ctx.reply('No archived projects.', { reply_markup: new InlineKeyboard().text('◀️ My Files', 'home_files') })
+    return
+  }
+  const kb = new InlineKeyboard()
+  for (const projectId of hidden) {
+    kb.text(`↩️ Restore #${projectId}`, `unhide_project:${projectId}`).row()
+  }
+  kb.text('◀️ My Files', 'home_files').text('🏠 Home', 'nav_home')
+  await ctx.reply(`*Archived projects* (${hidden.size})\n\nTap to restore:`, { parse_mode: 'Markdown', reply_markup: kb })
+})
+
+bot.callbackQuery(/^unhide_project:(\d+)$/, async ctx => {
+  await ctx.answerCallbackQuery()
+  const projectId = ctx.match[1]
+  const userId = String(ctx.from?.id)
+  unhideProject(sessionDbPath, userId, projectId)
+  await ctx.reply(`Project #${projectId} restored.`, {
+    reply_markup: new InlineKeyboard().text('◀️ My Files', 'home_files').text('📦 Archived', 'home_archived'),
+  })
 })
 
 
@@ -1020,23 +1050,12 @@ bot.callbackQuery(/^hide_project:(\d+)$/, async ctx => {
   const projectId = ctx.match[1]
   const userId = String(ctx.from.id)
   hideProject(sessionDbPath, userId, projectId)
-  await ctx.reply(`Hidden. The project won't appear in My Files anymore.\n\nTo restore it, use /unhide ${projectId}`, {
-    reply_markup: new InlineKeyboard().text('◀️ My Files', 'home_files').text('🏠 Home', 'nav_home'),
+  await ctx.reply(`Archived. Find it under 📦 Archived in My Files.`, {
+    reply_markup: new InlineKeyboard().text('◀️ My Files', 'home_files').text('📦 Archived', 'home_archived'),
   })
 })
 
-bot.command('unhide', async ctx => {
-  const projectId = ctx.match?.trim()
-  if (!projectId) {
-    await ctx.reply('Usage: /unhide <project_id>')
-    return
-  }
-  const userId = String(ctx.from?.id)
-  unhideProject(sessionDbPath, userId, projectId)
-  await ctx.reply(`Project ${projectId} is visible again in My Files.`, {
-    reply_markup: new InlineKeyboard().text('◀️ My Files', 'home_files'),
-  })
-})
+
 
 const MAX_DIRECT_BYTES = 48 * 1024 * 1024 // 48 MB Telegram bot API limit
 
