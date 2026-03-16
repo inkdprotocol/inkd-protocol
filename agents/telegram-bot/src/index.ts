@@ -669,9 +669,8 @@ bot.command('links', async ctx => {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
         .url('🌐 Website', 'https://inkdprotocol.com').row()
-        .url('🐦 Twitter / X', 'https://x.com/inkdprotocol').row()
+        .url('𝕏 @inkdprotocol', 'https://x.com/inkdprotocol').url('🤖 @inkdprotocolbot', 'https://x.com/inkdprotocolbot').row()
         .url('🪙 Buy $INKD on Clanker', 'https://clanker.world/clanker/0x103013851D4475d7D1610C7941E2a16534a1eB07').row()
-        .url('📊 Chart', 'https://dexscreener.com/base/0x096D02F26091c24387D914Cb7CffAC7eD44aa7F0').row()
         .url('📄 Docs', 'https://inkdprotocol.com')
     }
   )
